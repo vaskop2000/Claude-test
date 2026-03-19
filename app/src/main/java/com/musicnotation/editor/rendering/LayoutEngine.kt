@@ -83,10 +83,13 @@ class LayoutEngine(private val rc: RenderContext) {
     }
 
     private fun calculateHeaderWidth(staff: Staff): Float {
-        var width = rc.clefWidth
-        width += staff.keySignature.accidentalPitches.size * rc.keySigAccidentalWidth
-        width += rc.timeSigWidth
-        width += rc.dp(RenderConstants.SYSTEM_MARGIN_LEFT_DP)
+        var width = rc.dp(RenderConstants.SYSTEM_MARGIN_LEFT_DP)
+        width += rc.clefWidth + rc.dp(RenderConstants.HEADER_GAP_DP)
+        if (staff.keySignature.accidentalPitches.isNotEmpty()) {
+            width += staff.keySignature.accidentalPitches.size * rc.keySigAccidentalWidth
+            width += rc.dp(RenderConstants.HEADER_GAP_DP)
+        }
+        width += rc.timeSigWidth + rc.dp(RenderConstants.HEADER_GAP_DP)
         return width
     }
 
@@ -97,7 +100,10 @@ class LayoutEngine(private val rc: RenderContext) {
 
         score.staves.forEach { staff ->
             staff.measures.forEachIndexed { i, measure ->
-                val w = calculateMeasureContentWidth(measure, staff.timeSignature)
+                val contentW = calculateMeasureContentWidth(measure, staff.timeSignature)
+                // First measure must also accommodate the header (clef + key sig + time sig)
+                val headerW = if (i == 0) calculateHeaderWidth(staff) else rc.dp(4f)
+                val w = contentW + headerW
                 if (w > widths[i]) widths[i] = w
             }
         }
@@ -108,8 +114,13 @@ class LayoutEngine(private val rc: RenderContext) {
     }
 
     private fun calculateMeasureContentWidth(measure: Measure, timeSignature: TimeSignature): Float {
-        if (measure.elements.isEmpty()) return rc.noteSpacingMin * 4
-        return measure.elements.size * rc.noteSpacingMin + rc.dp(8f)
+        val totalTicks = timeSignature.ticksPerMeasure.toFloat()
+        // Proportional width: one quarter-note worth of space per beat
+        val quartersInMeasure = totalTicks / Duration.QUARTER.ticks
+        val timeProportionalWidth = quartersInMeasure * rc.noteSpacingMin
+        val noteCountWidth = measure.elements.size * rc.noteSpacingMin
+        val rightPad = rc.noteHeadW + rc.space * RenderConstants.MEASURE_RIGHT_PAD_SPACES
+        return maxOf(timeProportionalWidth, noteCountWidth) + rightPad
     }
 
     private fun layoutElements(
@@ -121,10 +132,14 @@ class LayoutEngine(private val rc: RenderContext) {
         val positions = mutableMapOf<Int, Float>()
         if (measure.elements.isEmpty()) return positions
 
+        // Reserve space for note head + padding before bar line so notes don't overlap it
+        val rightPad = rc.noteHeadW + rc.space * RenderConstants.MEASURE_RIGHT_PAD_SPACES
+        val usableWidth = maxOf(availableWidth - rightPad, rc.noteSpacingMin)
+
         val totalTicks = timeSignature.ticksPerMeasure.toFloat()
         measure.elements.forEach { element ->
             val xFraction = element.tickOffset / totalTicks
-            val x = contentStartX + xFraction * availableWidth
+            val x = contentStartX + xFraction * usableWidth
             positions[element.id] = x
         }
         return positions

@@ -21,6 +21,8 @@ object RenderConstants {
     const val TIME_SIG_WIDTH_SPACES = 2.0f
     const val MEASURE_PADDING_SPACES = 0.5f
     const val NOTE_SPACING_MIN_SPACES = 2.5f   // min space between notes
+    const val MEASURE_RIGHT_PAD_SPACES = 1.0f  // padding before bar line
+    const val HEADER_GAP_DP = 4f               // gap between clef / key sig / time sig
 
     const val STAFF_LABEL_WIDTH_DP = 80f
     const val STAFF_MARGIN_TOP_DP = 20f

@@ -109,10 +109,13 @@ class MusicRenderer(context: Context) {
         if (measureLayout.measureIndex == 0) {
             var headerX = x + rc.dp(RenderConstants.SYSTEM_MARGIN_LEFT_DP)
             clefRenderer.draw(canvas, staff.clef, headerX, staffTopY)
-            headerX += rc.clefWidth
+            headerX += rc.clefWidth + rc.dp(RenderConstants.HEADER_GAP_DP)
 
             keySigRenderer.draw(canvas, staff.keySignature, staff.clef, headerX, staffTopY)
-            headerX += staff.keySignature.accidentalPitches.size * rc.keySigAccidentalWidth
+            if (staff.keySignature.accidentalPitches.isNotEmpty()) {
+                headerX += staff.keySignature.accidentalPitches.size * rc.keySigAccidentalWidth
+                headerX += rc.dp(RenderConstants.HEADER_GAP_DP)
+            }
 
             timeSigRenderer.draw(canvas, staff.timeSignature, headerX, staffTopY)
         }
