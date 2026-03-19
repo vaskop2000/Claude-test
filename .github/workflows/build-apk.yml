@@ -30,14 +30,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Build release APK
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: music-notation-editor-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: music-notation-editor-release
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 30
 
       - name: Create Release
@@ -49,7 +49,7 @@ jobs:
             Автоматическая сборка из ветки `${{ github.ref_name }}`
 
             Коммит: ${{ github.sha }}
-          files: app/build/outputs/apk/debug/*.apk
+          files: app/build/outputs/apk/release/*.apk
           draft: false
           prerelease: true
         env:
