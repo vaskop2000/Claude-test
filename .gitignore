@@ -1,0 +1,12 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# Android
+*.deb
+*.apk
+
+# IDE
+.idea/
+*.iml
