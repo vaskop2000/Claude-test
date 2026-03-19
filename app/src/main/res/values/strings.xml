@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Нотный редактор</string>
+
+    <!-- Score -->
+    <string name="new_score">Новая партитура</string>
+    <string name="untitled">Без названия</string>
+    <string name="score_title">Название</string>
+    <string name="composer">Композитор</string>
+    <string name="composer_hint">Имя композитора</string>
+    <string name="measure_count">Количество тактов</string>
+    <string name="create">Создать</string>
+    <string name="cancel">Отмена</string>
+    <string name="apply">Применить</string>
+
+    <!-- Staff -->
+    <string name="staves">Нотные станы</string>
+    <string name="add_staff">+ Добавить стан</string>
+    <string name="select_instrument">Выбрать инструмент</string>
+    <string name="staff_properties">Свойства стана</string>
+    <string name="clef">Ключ</string>
+    <string name="key_signature">Ключевые знаки</string>
+    <string name="time_signature">Размер</string>
+
+    <!-- Measures -->
+    <string name="add_measure">+ Такт</string>
+    <string name="remove_measure">− Такт</string>
+
+    <!-- Note input -->
+    <string name="duration">Длительность</string>
+    <string name="note_whole">Целая</string>
+    <string name="note_half">Половинная</string>
+    <string name="note_quarter">Четверть</string>
+    <string name="note_eighth">Восьмая</string>
+    <string name="note_sixteenth">16-я</string>
+    <string name="note_thirty_second">32-я</string>
+    <string name="dotted">С точкой</string>
+    <string name="rest">Пауза</string>
+    <string name="stem_up">Штиль вверх</string>
+    <string name="stem_down">Штиль вниз</string>
+    <string name="beam">Ребро</string>
+    <string name="triplet">Триоль</string>
+    <string name="quintuplet">Квинтоль</string>
+</resources>

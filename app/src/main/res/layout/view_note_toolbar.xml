@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<HorizontalScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:padding="4dp"
+        android:gravity="center_vertical">
+
+        <!-- Duration buttons -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Длительность:"
+            android:textSize="11sp"
+            android:paddingEnd="4dp" />
+
+        <Button
+            android:id="@+id/btnWhole"
+            android:layout_width="52dp"
+            android:layout_height="44dp"
+            android:text="𝅝"
+            android:textSize="18sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <Button
+            android:id="@+id/btnHalf"
+            android:layout_width="52dp"
+            android:layout_height="44dp"
+            android:text="𝅗𝅥"
+            android:textSize="18sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <Button
+            android:id="@+id/btnQuarter"
+            android:layout_width="52dp"
+            android:layout_height="44dp"
+            android:text="♩"
+            android:textSize="18sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <Button
+            android:id="@+id/btnEighth"
+            android:layout_width="52dp"
+            android:layout_height="44dp"
+            android:text="♪"
+            android:textSize="18sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <Button
+            android:id="@+id/btnSixteenth"
+            android:layout_width="52dp"
+            android:layout_height="44dp"
+            android:text="𝅘𝅥𝅯"
+            android:textSize="14sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <Button
+            android:id="@+id/btnThirtySecond"
+            android:layout_width="52dp"
+            android:layout_height="44dp"
+            android:text="𝅘𝅥𝅰"
+            android:textSize="14sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <!-- Dot -->
+        <ToggleButton
+            android:id="@+id/btnDot"
+            android:layout_width="40dp"
+            android:layout_height="44dp"
+            android:textOn="·"
+            android:textOff="·"
+            android:textSize="24sp"
+            android:layout_marginStart="4dp"
+            style="@style/ToolbarToggleButton" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="36dp"
+            android:background="@color/divider"
+            android:layout_marginHorizontal="6dp" />
+
+        <!-- Accidentals -->
+        <Button
+            android:id="@+id/btnSharp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="♯"
+            android:textSize="20sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <Button
+            android:id="@+id/btnFlat"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="♭"
+            android:textSize="22sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <Button
+            android:id="@+id/btnNatural"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="♮"
+            android:textSize="18sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="36dp"
+            android:background="@color/divider"
+            android:layout_marginHorizontal="6dp" />
+
+        <!-- Rest -->
+        <ToggleButton
+            android:id="@+id/btnRest"
+            android:layout_width="52dp"
+            android:layout_height="44dp"
+            android:textOn="𝄽"
+            android:textOff="𝄽"
+            android:textSize="16sp"
+            style="@style/ToolbarToggleButton" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="36dp"
+            android:background="@color/divider"
+            android:layout_marginHorizontal="6dp" />
+
+        <!-- Stem direction -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Штиль:"
+            android:textSize="11sp"
+            android:paddingEnd="4dp" />
+
+        <Button
+            android:id="@+id/btnStemUp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="↑"
+            android:textSize="18sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <Button
+            android:id="@+id/btnStemDown"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:text="↓"
+            android:textSize="18sp"
+            android:padding="2dp"
+            style="@style/ToolbarButton" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="36dp"
+            android:background="@color/divider"
+            android:layout_marginHorizontal="6dp" />
+
+        <!-- Beam -->
+        <ToggleButton
+            android:id="@+id/btnBeam"
+            android:layout_width="52dp"
+            android:layout_height="44dp"
+            android:textOn="Ребро"
+            android:textOff="Ребро"
+            android:textSize="10sp"
+            style="@style/ToolbarToggleButton" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="36dp"
+            android:background="@color/divider"
+            android:layout_marginHorizontal="6dp" />
+
+        <!-- Tuplets -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Группа:"
+            android:textSize="11sp"
+            android:paddingEnd="4dp" />
+
+        <ToggleButton
+            android:id="@+id/btnTriplet"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:textOn="3"
+            android:textOff="3"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            style="@style/ToolbarToggleButton" />
+
+        <ToggleButton
+            android:id="@+id/btnQuintuplet"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:textOn="5"
+            android:textOff="5"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            style="@style/ToolbarToggleButton" />
+
+    </LinearLayout>
+</HorizontalScrollView>

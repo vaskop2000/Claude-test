@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#1976D2</color>
+    <color name="colorPrimaryDark">#1565C0</color>
+    <color name="colorAccent">#FF5722</color>
+
+    <color name="score_background">#FAFAF8</color>
+    <color name="toolbar_background">#F5F5F5</color>
+    <color name="divider">#BDBDBD</color>
+
+    <color name="note_ink">#1A1A1A</color>
+    <color name="note_selected">#1976D2</color>
+    <color name="staff_line">#333333</color>
+    <color name="button_selected_bg">#E3F2FD</color>
+    <color name="button_selected_text">#1976D2</color>
+</resources>

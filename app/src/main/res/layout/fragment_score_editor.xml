@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/score_background">
+
+    <!-- Top action bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="@color/toolbar_background"
+        android:elevation="4dp"
+        android:padding="4dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <Button
+            android:id="@+id/btnNewScore"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/new_score"
+            android:textSize="12sp"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="@color/divider"
+            android:layout_marginHorizontal="4dp" />
+
+        <Button
+            android:id="@+id/btnAddMeasure"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/add_measure"
+            android:textSize="12sp"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+        <Button
+            android:id="@+id/btnRemoveMeasure"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/remove_measure"
+            android:textSize="12sp"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="@color/divider"
+            android:layout_marginHorizontal="4dp" />
+
+        <Button
+            android:id="@+id/btnStaffProps"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="@string/staff_properties"
+            android:textSize="12sp"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+    </LinearLayout>
+
+    <!-- Score canvas -->
+    <com.musicnotation.editor.ui.views.ScoreCanvasView
+        android:id="@+id/scoreCanvasView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@color/score_background"
+        app:layout_constraintTop_toBottomOf="@id/topBar"
+        app:layout_constraintBottom_toTopOf="@id/noteInputToolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Note input toolbar (bottom) -->
+    <com.musicnotation.editor.ui.views.NoteInputToolbar
+        android:id="@+id/noteInputToolbar"
+        android:layout_width="0dp"
+        android:layout_height="80dp"
+        android:background="@color/toolbar_background"
+        android:elevation="4dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

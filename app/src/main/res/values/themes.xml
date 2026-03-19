@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.MusicNotationEditor" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/score_background</item>
+    </style>
+
+    <style name="ToolbarButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:layout_marginHorizontal">2dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:paddingHorizontal">4dp</item>
+        <item name="android:paddingVertical">4dp</item>
+        <item name="strokeColor">@color/divider</item>
+    </style>
+
+    <style name="ToolbarToggleButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:layout_marginHorizontal">2dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:paddingHorizontal">4dp</item>
+        <item name="android:paddingVertical">4dp</item>
+        <item name="strokeColor">@color/colorPrimary</item>
+    </style>
+
+</resources>
