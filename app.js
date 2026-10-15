@@ -3,6 +3,7 @@
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
 const DRAFT_KEY = 'wd.draft.v1';
+const STASH_KEY = 'wd.stash.v1'; // недописанная тренировка, отложенная на время редактирования
 
 const load = (k, fallback) => {
   try { return JSON.parse(localStorage.getItem(k)) ?? fallback; } catch { return fallback; }
@@ -43,6 +44,8 @@ const exerciseNames = () => [...new Set(sortedWorkouts().flatMap((w) => w.exerci
 
 function lastSetsFor(name) {
   for (const w of sortedWorkouts()) {
+    // Подсказываем только более ранние тренировки и не саму редактируемую
+    if (w.id === draft.editId || w.date > draft.date) continue;
     const ex = w.exercises.find((e) => e.name.toLowerCase() === name.toLowerCase());
     if (ex) return { date: w.date, sets: ex.sets };
   }
@@ -55,7 +58,7 @@ const TITLES = { log: 'Тренировка', history: 'История', progres
 function show(view) {
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
   document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
-  $('#title').textContent = TITLES[view];
+  $('#title').textContent = view === 'log' && draft.editId ? 'Редактирование' : TITLES[view];
   if (view === 'history') renderHistory();
   if (view === 'progress') renderProgress();
   if (view === 'claude') renderPreview();
@@ -66,7 +69,30 @@ document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click
 // ---------- Текущая тренировка ----------
 function persistDraft() { save(DRAFT_KEY, draft); }
 
+const toDraftExercises = (w) =>
+  w.exercises.map((ex) => ({ name: ex.name, sets: ex.sets.map((s) => ({ w: String(s.w), r: String(s.r) })) }));
+const draftIsEmpty = () => !draft.exercises.length && !(draft.title || '').trim() && !draft.note.trim();
+
+function startEdit(w) {
+  // Недописанную новую тренировку откладываем, чтобы вернуть её после редактирования
+  if (!draft.editId && !draftIsEmpty()) save(STASH_KEY, draft);
+  draft = { editId: w.id, title: w.title || '', date: w.date, note: w.note || '', exercises: toDraftExercises(w) };
+  persistDraft();
+  renderDraft();
+  show('log');
+}
+
+function finishEdit() {
+  draft = load(STASH_KEY, null) || newDraft();
+  localStorage.removeItem(STASH_KEY);
+  persistDraft();
+  renderDraft();
+}
+
 function renderDraft() {
+  $('#save-workout').textContent = draft.editId ? 'Сохранить изменения' : 'Сохранить тренировку';
+  $('#cancel-edit').hidden = !draft.editId;
+  if ($('#view-log').classList.contains('active')) $('#title').textContent = draft.editId ? 'Редактирование' : TITLES.log;
   $('#w-date').value = draft.date;
   $('#w-title').value = draft.title || '';
   $('#w-note').value = draft.note;
@@ -172,12 +198,26 @@ $('#save-workout').addEventListener('click', () => {
     }))
     .filter((ex) => ex.sets.length);
   if (!exercises.length) return toast('Добавьте хотя бы один подход');
-  workouts.push({ id: Date.now(), title: (draft.title || '').trim(), date: draft.date, note: draft.note.trim(), exercises });
+  const data = { title: (draft.title || '').trim(), date: draft.date, note: draft.note.trim(), exercises };
+  const idx = draft.editId ? workouts.findIndex((w) => w.id === draft.editId) : -1;
+  if (idx >= 0) {
+    workouts[idx] = { id: draft.editId, ...data };
+    save(KEY, workouts);
+    finishEdit();
+    show('history');
+    return toast('Изменения сохранены');
+  }
+  workouts.push({ id: Date.now(), ...data });
   save(KEY, workouts);
   draft = newDraft();
   persistDraft();
   renderDraft();
   toast('Тренировка сохранена 💪');
+});
+
+$('#cancel-edit').addEventListener('click', () => {
+  finishEdit();
+  show('history');
 });
 
 // ---------- История ----------
@@ -200,6 +240,7 @@ function renderHistory() {
       <ul>${w.exercises.map((ex) => `<li>${esc(ex.name)} <em>${ex.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(' · ')}</em></li>`).join('')}</ul>
       ${w.note ? `<div class="note">${esc(w.note)}</div>` : ''}
       <div class="row" style="margin:8px 0 0">
+        <button class="btn small" data-edit="${w.id}">Изменить</button>
         <button class="btn small" data-repeat="${w.id}">Повторить</button>
         <button class="btn ghost" data-del-w="${w.id}">Удалить</button>
       </div>
@@ -207,19 +248,21 @@ function renderHistory() {
 }
 
 $('#history-list').addEventListener('click', (e) => {
-  const id = Number(e.target.dataset.delW || e.target.dataset.repeat);
+  const { delW, repeat, edit } = e.target.dataset;
+  const id = Number(delW || repeat || edit);
   if (!id) return;
   const w = workouts.find((x) => x.id === id);
-  if (e.target.dataset.delW) {
+  if (edit) {
+    startEdit(w);
+  } else if (delW) {
     if (!confirm('Удалить тренировку?')) return;
     workouts = workouts.filter((x) => x.id !== id);
     save(KEY, workouts);
+    if (draft.editId === id) finishEdit();
     renderHistory();
   } else {
-    draft = {
-      title: w.title || '', date: today(), note: '',
-      exercises: w.exercises.map((ex) => ({ name: ex.name, sets: ex.sets.map((s) => ({ w: String(s.w), r: String(s.r) })) })),
-    };
+    if (draft.editId) finishEdit();
+    draft = { title: w.title || '', date: today(), note: '', exercises: toDraftExercises(w) };
     persistDraft();
     renderDraft();
     show('log');
