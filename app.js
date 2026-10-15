@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 5; // увеличивать вместе с CACHE в sw.js
+const VERSION = 6; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -420,6 +420,53 @@ $('#ai-open').addEventListener('click', async () => {
 
 $('#ai-copy').addEventListener('click', async () => {
   toast((await copyPrompt(buildPrompt())) ? 'Скопировано' : 'Не удалось скопировать');
+});
+
+// ---------- Экспорт в Заметки ----------
+// Человекочитаемый текст всей истории. Android-меню «Поделиться» передаёт его
+// в любое приложение, принимающее текст, — например, в «Заметки» Xiaomi.
+function buildNotesText() {
+  const list = sortedWorkouts();
+  const longDate = (iso) => {
+    const s = new Date(iso + 'T00:00').toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+  const records = exerciseNames().sort((a, b) => a.localeCompare(b, 'ru')).map((n) => {
+    const s = seriesFor(n);
+    const max = Math.max(...s.map((d) => d.max));
+    const best = Math.max(...s.map((d) => d.e1rm));
+    return `• ${n}: макс. ${fmt(max)} кг, 1ПМ ≈ ${fmt(best)} кг`;
+  });
+
+  const body = list.map((w) => [
+    longDate(w.date) + (w.title ? ` — ${w.title}` : ''),
+    ...w.exercises.map((ex) => `• ${ex.name}: ${ex.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(', ')}`),
+    `Объём: ${Math.round(workoutVolume(w))} кг`,
+    ...(w.note ? [`Заметка: ${w.note}`] : []),
+  ].join('\n'));
+
+  return [
+    'ДНЕВНИК ТРЕНИРОВОК',
+    `Экспорт: ${longDate(today())} · тренировок: ${list.length}`,
+    '',
+    'ЛИЧНЫЕ РЕКОРДЫ',
+    ...records,
+    '',
+    'ИСТОРИЯ',
+    '',
+    body.join('\n\n— — —\n\n'),
+  ].join('\n');
+}
+
+$('#export-notes').addEventListener('click', async () => {
+  if (!workouts.length) return toast('История пуста');
+  const text = buildNotesText();
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Дневник тренировок', text }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  toast((await copyPrompt(text)) ? 'Скопировано — вставьте в Заметки' : 'Не удалось поделиться');
 });
 
 // ---------- Резервная копия ----------
