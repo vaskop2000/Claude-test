@@ -20,6 +20,10 @@
 
 [hidden] { display: none !important; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* Как в обычном приложении: касание или долгое нажатие на текст не выделяет его
+   и не вызывает «Копировать» / поиск Google. В полях ввода выделение остаётся. */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 html, body { margin: 0; background: var(--bg); color: var(--fg); }
 body {
   font: 16px/1.4 system-ui, -apple-system, "Roboto", sans-serif;
