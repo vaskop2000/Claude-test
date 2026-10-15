@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <meta name="description" content="Минималистичный дневник тренировок с анализом в Claude">
+  <title>Дневник тренировок</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1 id="title">Тренировка</h1>
+  </header>
+
+  <main>
+    <!-- Текущая тренировка -->
+    <section id="view-log" class="view active">
+      <div class="row">
+        <input type="date" id="w-date">
+      </div>
+      <div id="draft-exercises"></div>
+      <form id="add-ex-form" class="row">
+        <input id="ex-name" list="ex-list" placeholder="Упражнение" autocomplete="off" required>
+        <datalist id="ex-list"></datalist>
+        <button type="submit" class="btn">+</button>
+      </form>
+      <textarea id="w-note" rows="2" placeholder="Заметка: самочувствие, сон, RPE…"></textarea>
+      <button id="save-workout" class="btn primary wide">Сохранить тренировку</button>
+    </section>
+
+    <!-- История -->
+    <section id="view-history" class="view">
+      <div id="history-list"></div>
+    </section>
+
+    <!-- Прогресс -->
+    <section id="view-progress" class="view">
+      <select id="progress-ex"></select>
+      <div class="seg" id="metric-seg">
+        <button data-metric="e1rm" class="on">1ПМ</button>
+        <button data-metric="max">Макс. вес</button>
+        <button data-metric="volume">Объём</button>
+      </div>
+      <div id="chart"></div>
+      <div id="progress-stats" class="stats"></div>
+    </section>
+
+    <!-- Claude -->
+    <section id="view-claude" class="view">
+      <p class="muted">Приложение соберёт ваши тренировки в запрос и передаст его в Claude — анализ идёт в рамках вашей подписки Claude Pro, без API-ключей.</p>
+      <label class="lbl">Период</label>
+      <select id="ai-period">
+        <option value="14">2 недели</option>
+        <option value="28" selected>4 недели</option>
+        <option value="90">3 месяца</option>
+        <option value="0">Всё время</option>
+      </select>
+      <label class="lbl">Вопрос к Claude</label>
+      <select id="ai-preset">
+        <option value="analyze">Общий анализ прогресса</option>
+        <option value="plan">План на следующую неделю</option>
+        <option value="plateau">Где застой и что делать</option>
+        <option value="balance">Баланс мышечных групп и объёма</option>
+        <option value="custom">Свой вопрос…</option>
+      </select>
+      <textarea id="ai-custom" rows="3" placeholder="Например: готов ли я к 100 кг в жиме?" hidden></textarea>
+      <button id="ai-share" class="btn primary wide">Отправить в приложение Claude</button>
+      <button id="ai-open" class="btn wide">Открыть в claude.ai</button>
+      <button id="ai-copy" class="btn wide">Скопировать запрос</button>
+      <details>
+        <summary>Предпросмотр запроса</summary>
+        <pre id="ai-preview"></pre>
+      </details>
+      <hr>
+      <div class="row">
+        <button id="export" class="btn">Экспорт</button>
+        <label class="btn">Импорт<input type="file" id="import" accept="application/json" hidden></label>
+      </div>
+    </section>
+  </main>
+
+  <nav>
+    <button data-view="log" class="on">Сегодня</button>
+    <button data-view="history">История</button>
+    <button data-view="progress">Прогресс</button>
+    <button data-view="claude">Claude</button>
+  </nav>
+
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
