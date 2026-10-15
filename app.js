@@ -1,5 +1,7 @@
 'use strict';
 
+const VERSION = 5; // увеличивать вместе с CACHE в sw.js
+
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
 const DRAFT_KEY = 'wd.draft.v1';
@@ -450,6 +452,28 @@ $('#import').addEventListener('change', async (e) => {
 
 // ---------- Старт ----------
 renderDraft();
+// ---------- Обновления ----------
+// Установленное приложение Android держит в памяти, поэтому сами проверяем
+// обновления при каждом возврате в приложение и перезагружаемся, когда
+// новая версия готова. Черновик хранится в localStorage, так что ничего не теряется.
+$('#app-version').textContent = 'Версия ' + VERSION;
+let swReg = null;
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((r) => { swReg = r; });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && swReg) swReg.update().catch(() => {});
+  });
 }
+
+$('#check-update').addEventListener('click', async () => {
+  toast('Проверяю…');
+  try { if (swReg) await swReg.update(); } catch {}
+  location.reload();
+});

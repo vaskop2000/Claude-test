@@ -164,3 +164,5 @@ nav button.on { color: var(--fg); font-weight: 700; }
   opacity: 0; transition: opacity .2s; pointer-events: none;
 }
 #toast.show { opacity: 1; }
+
+.version { justify-content: space-between; margin-top: 16px; }
