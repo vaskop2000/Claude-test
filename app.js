@@ -87,7 +87,7 @@ function renderDraft() {
     return `
       <div class="ex">
         <div class="ex-head">
-          <b>${esc(ex.name)}</b>
+          <input class="ex-title" value="${esc(ex.name)}" data-name="${i}" list="ex-list" aria-label="Название упражнения" autocomplete="off">
           <button class="btn ghost" data-del-ex="${i}">Удалить</button>
         </div>
         ${hint}
@@ -97,11 +97,33 @@ function renderDraft() {
   }).join('');
 }
 
+const canonicalName = (name) => exerciseNames().find((n) => n.toLowerCase() === name.toLowerCase()) || name;
+
 $('#draft-exercises').addEventListener('input', (e) => {
+  if (e.target.dataset.name !== undefined) {
+    draft.exercises[e.target.dataset.name].name = e.target.value;
+    persistDraft();
+    return;
+  }
   const { i, j, f } = e.target.dataset;
   if (i === undefined) return;
   draft.exercises[i].sets[j][f] = e.target.value;
   persistDraft();
+});
+
+// Переименование упражнения: по завершении ввода приводим к известному названию
+// и перерисовываем, чтобы обновилась подсказка «прошлый раз».
+$('#draft-exercises').addEventListener('change', (e) => {
+  const i = e.target.dataset.name;
+  if (i === undefined) return;
+  const ex = draft.exercises[i];
+  ex.name = canonicalName(e.target.value.trim()) || ex.name;
+  if (!ex.name) ex.name = 'Без названия';
+  persistDraft();
+  renderDraft();
+});
+$('#draft-exercises').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.dataset.name !== undefined) e.target.blur();
 });
 
 $('#draft-exercises').addEventListener('click', (e) => {
@@ -125,7 +147,7 @@ $('#add-ex-form').addEventListener('submit', (e) => {
   const name = $('#ex-name').value.trim();
   if (!name) return;
   // Используем каноническое написание, если упражнение уже встречалось
-  const known = exerciseNames().find((n) => n.toLowerCase() === name.toLowerCase()) || name;
+  const known = canonicalName(name);
   const last = lastSetsFor(known);
   const first = last ? last.sets[0] : { w: '', r: '' };
   draft.exercises.push({ name: known, sets: [{ w: String(first.w), r: String(first.r) }] });
@@ -140,7 +162,7 @@ $('#w-note').addEventListener('input', (e) => { draft.note = e.target.value; per
 $('#save-workout').addEventListener('click', () => {
   const exercises = draft.exercises
     .map((ex) => ({
-      name: ex.name,
+      name: canonicalName(ex.name.trim()) || 'Без названия',
       sets: ex.sets.map((s) => ({ w: num(s.w), r: Math.round(num(s.r)) })).filter((s) => s.r > 0),
     }))
     .filter((ex) => ex.sets.length);
