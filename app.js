@@ -14,7 +14,7 @@ let draft = load(DRAFT_KEY, null) || newDraft();
 let metric = 'e1rm';
 
 function newDraft() {
-  return { date: today(), note: '', exercises: [] };
+  return { title: '', date: today(), note: '', exercises: [] };
 }
 function today() {
   const d = new Date();
@@ -68,7 +68,10 @@ function persistDraft() { save(DRAFT_KEY, draft); }
 
 function renderDraft() {
   $('#w-date').value = draft.date;
+  $('#w-title').value = draft.title || '';
   $('#w-note').value = draft.note;
+  $('#title-list').innerHTML = [...new Set(sortedWorkouts().map((w) => w.title).filter(Boolean))]
+    .map((t) => `<option value="${esc(t)}">`).join('');
   $('#ex-list').innerHTML = exerciseNames().map((n) => `<option value="${esc(n)}">`).join('');
 
   $('#draft-exercises').innerHTML = draft.exercises.map((ex, i) => {
@@ -158,6 +161,8 @@ $('#add-ex-form').addEventListener('submit', (e) => {
 
 $('#w-date').addEventListener('change', (e) => { draft.date = e.target.value || today(); persistDraft(); });
 $('#w-note').addEventListener('input', (e) => { draft.note = e.target.value; persistDraft(); });
+$('#w-title').addEventListener('input', (e) => { draft.title = e.target.value; persistDraft(); });
+$('#w-title').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 
 $('#save-workout').addEventListener('click', () => {
   const exercises = draft.exercises
@@ -167,7 +172,7 @@ $('#save-workout').addEventListener('click', () => {
     }))
     .filter((ex) => ex.sets.length);
   if (!exercises.length) return toast('Добавьте хотя бы один подход');
-  workouts.push({ id: Date.now(), date: draft.date, note: draft.note.trim(), exercises });
+  workouts.push({ id: Date.now(), title: (draft.title || '').trim(), date: draft.date, note: draft.note.trim(), exercises });
   save(KEY, workouts);
   draft = newDraft();
   persistDraft();
@@ -189,7 +194,7 @@ function renderHistory() {
   $('#history-list').innerHTML = list.map((w) => `
     <div class="card">
       <div class="card-head">
-        <b>${fmtDate(w.date)}</b>
+        <div><b>${w.title ? esc(w.title) : fmtDate(w.date)}</b>${w.title ? ` <span class="muted">${fmtDate(w.date)}</span>` : ''}</div>
         <span class="muted">${Math.round(workoutVolume(w))} кг</span>
       </div>
       <ul>${w.exercises.map((ex) => `<li>${esc(ex.name)} <em>${ex.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(' · ')}</em></li>`).join('')}</ul>
@@ -212,7 +217,7 @@ $('#history-list').addEventListener('click', (e) => {
     renderHistory();
   } else {
     draft = {
-      date: today(), note: '',
+      title: w.title || '', date: today(), note: '',
       exercises: w.exercises.map((ex) => ({ name: ex.name, sets: ex.sets.map((s) => ({ w: String(s.w), r: String(s.r) })) })),
     };
     persistDraft();
@@ -310,7 +315,7 @@ function buildPrompt() {
 
   const log = list.map((w) => {
     const ex = w.exercises.map((e) => `  - ${e.name}: ${e.sets.map((s) => `${fmt(s.w)}кг×${s.r}`).join(', ')}`).join('\n');
-    return `${w.date}${w.note ? ` (заметка: ${w.note})` : ''}\n${ex}`;
+    return `${w.date}${w.title ? ` — ${w.title}` : ''}${w.note ? ` (заметка: ${w.note})` : ''}\n${ex}`;
   }).join('\n\n');
 
   const names = [...new Set(list.flatMap((w) => w.exercises.map((e) => e.name)))];

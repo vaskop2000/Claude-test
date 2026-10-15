@@ -1,5 +1,5 @@
 // Офлайн-кэш: приложение работает без интернета (кроме отправки в Claude).
-const CACHE = 'wd-v2';
+const CACHE = 'wd-v3';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

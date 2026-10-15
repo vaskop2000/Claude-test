@@ -31,6 +31,14 @@ header { padding: 20px 16px 8px; }
 h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
 main { padding: 8px 16px 24px; }
 
+.w-title {
+  font-size: 22px; font-weight: 700;
+  background: none; border-color: transparent;
+  border-bottom: 1px dashed var(--muted); border-radius: 0;
+  padding: 8px 2px; margin-bottom: 12px;
+}
+.w-title:focus { background: var(--card); border-radius: 12px; border-color: var(--accent); padding: 8px 12px; }
+
 .view { display: none; }
 .view.active { display: block; }
 
@@ -76,10 +84,10 @@ textarea { resize: vertical; margin: 12px 0; }
   flex: 1; min-width: 0;
   font-size: 18px; font-weight: 700;
   background: none; border-color: transparent;
-  padding: 6px 8px; margin-left: -8px;
+  padding: 6px 2px;
   border-bottom: 1px dashed var(--muted); border-radius: 0;
 }
-.ex-title:focus { background: var(--card); border-radius: 10px; border-color: var(--accent); }
+.ex-title:focus { background: var(--card); border-radius: 10px; border-color: var(--accent); padding: 6px 8px; }
 .ex-hint { color: var(--muted); font-size: 13px; margin: -4px 0 8px; }
 .set {
   display: grid;
