@@ -1,5 +1,5 @@
 // Офлайн-кэш: приложение работает без интернета (кроме отправки в Claude).
-const CACHE = 'wd-v8';
+const CACHE = 'wd-v9';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -13,18 +13,38 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// Сначала сеть (чтобы обновления подхватывались), при отсутствии сети — кэш.
+// Сначала сеть (чтобы обновления подхватывались), но не дольше NET_TIMEOUT:
+// при плохой связи сразу отдаём сохранённую копию, а свежая докачается в фоне
+// и будет использована при следующем открытии. Без сети вовсе — сразу копия.
 // cache: 'no-cache' — не брать устаревшие файлы из HTTP-кэша браузера
 // (GitHub Pages разрешает кэшировать их до 10 минут), а сверяться с сервером.
+const NET_TIMEOUT = 2500;
+
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
-  e.respondWith(
-    fetch(e.request.url, { cache: 'no-cache' }) // по URL: навигационный Request нельзя переопределять
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
-        return res;
-      })
-      .catch(() => caches.match(e.request, { ignoreSearch: true }))
-  );
+  const cached = () => caches.match(e.request, { ignoreSearch: true });
+
+  // по URL: навигационный Request нельзя переопределять
+  const network = fetch(e.request.url, { cache: 'no-cache' }).then(async (res) => {
+    if (res.ok) {
+      const c = await caches.open(CACHE);
+      await c.put(e.request, res.clone());
+    }
+    return res;
+  });
+  e.waitUntil(network.catch(() => {})); // дать фоновой загрузке завершиться
+
+  e.respondWith(new Promise((resolve, reject) => {
+    let settled = false;
+    const answer = (res) => { if (!settled) { settled = true; clearTimeout(timer); resolve(res); } };
+    const timer = setTimeout(async () => {
+      const res = await cached();
+      if (res) answer(res); // иначе продолжаем ждать сеть
+    }, NET_TIMEOUT);
+    network.then(answer, async () => {
+      const res = await cached();
+      if (res) answer(res);
+      else if (!settled) { settled = true; clearTimeout(timer); reject(new Error('offline')); }
+    });
+  }));
 });
