@@ -92,6 +92,22 @@
     </section>
   </main>
 
+  <!-- Таймер отдыха (виден на экране тренировки) -->
+  <div id="timer">
+    <div class="t-idle">
+      <span class="muted">Отдых</span>
+      <button data-rest="120">2 мин</button>
+      <button data-rest="180">3 мин</button>
+      <button data-rest="240">4 мин</button>
+    </div>
+    <div class="t-run">
+      <b id="t-left">0:00</b>
+      <button id="t-plus">+30 с</button>
+      <button id="t-stop" aria-label="Остановить">✕</button>
+    </div>
+    <i id="t-bar"></i>
+  </div>
+
   <nav>
     <button data-view="log" class="on">Сегодня</button>
     <button data-view="history">История</button>

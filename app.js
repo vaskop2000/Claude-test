@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 7; // увеличивать вместе с CACHE в sw.js
+const VERSION = 8; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -60,6 +60,7 @@ const TITLES = { log: 'Тренировка', history: 'История', progres
 function show(view) {
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
   document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
+  document.body.dataset.view = view;
   $('#title').textContent = view === 'log' && draft.editId ? 'Редактирование' : TITLES[view];
   if (view === 'history') renderHistory();
   if (view === 'progress') renderProgress();
@@ -422,6 +423,100 @@ $('#ai-copy').addEventListener('click', async () => {
   toast((await copyPrompt(buildPrompt())) ? 'Скопировано' : 'Не удалось скопировать');
 });
 
+// ---------- Таймер отдыха ----------
+// Время окончания храним в localStorage: таймер переживает сворачивание и перезапуск.
+const TIMER_KEY = 'wd.timer.v1';
+let timer = load(TIMER_KEY, null); // { end, total }
+let tick = null, wakeLock = null, audio = null;
+
+const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+
+function beep() {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume();
+    [0, 0.35, 0.7].forEach((t) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.25, audio.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + t + 0.25);
+      o.connect(g).connect(audio.destination);
+      o.start(audio.currentTime + t);
+      o.stop(audio.currentTime + t + 0.3);
+    });
+  } catch {}
+}
+
+async function keepAwake(on) {
+  // Экран не гаснет, пока идёт отдых, — иначе сигнал не прозвучит
+  try {
+    if (on && !wakeLock && navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+    if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch {}
+}
+
+function renderTimer() {
+  const el = $('#timer');
+  clearInterval(tick);
+  el.classList.remove('done');
+  if (!timer) {
+    el.classList.remove('running');
+    $('#t-bar').style.width = '0';
+    keepAwake(false);
+    return;
+  }
+  el.classList.add('running');
+  keepAwake(true);
+  const update = () => {
+    const left = Math.max(0, Math.ceil((timer.end - Date.now()) / 1000));
+    $('#t-left').textContent = left ? mmss(left) : 'Отдых окончен';
+    $('#t-bar').style.width = `${100 * (1 - left / timer.total)}%`;
+    if (!left) finishTimer();
+  };
+  update();
+  if (timer) tick = setInterval(update, 250);
+}
+
+function finishTimer() {
+  clearInterval(tick);
+  const late = Date.now() - timer.end > 5000; // вернулись в приложение уже после окончания
+  timer = null;
+  localStorage.removeItem(TIMER_KEY);
+  keepAwake(false);
+  const el = $('#timer');
+  el.classList.add('done');
+  if (!late) {
+    beep();
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
+  }
+  setTimeout(() => { if (!timer) { el.classList.remove('running', 'done'); $('#t-bar').style.width = '0'; } }, 6000);
+}
+
+function startTimer(sec) {
+  // Браузер разрешает звук только после касания — готовим его заранее
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch {}
+  timer = { end: Date.now() + sec * 1000, total: sec };
+  save(TIMER_KEY, timer);
+  renderTimer();
+}
+
+document.querySelectorAll('[data-rest]').forEach((b) => b.addEventListener('click', () => startTimer(Number(b.dataset.rest))));
+$('#t-plus').addEventListener('click', () => {
+  if (!timer) return;
+  timer.end += 30000;
+  timer.total += 30;
+  save(TIMER_KEY, timer);
+  renderTimer();
+});
+$('#t-stop').addEventListener('click', () => {
+  timer = null;
+  localStorage.removeItem(TIMER_KEY);
+  renderTimer();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') renderTimer();
+});
+
 // ---------- Экспорт в Заметки ----------
 // Человекочитаемый текст всей истории. Android-меню «Поделиться» передаёт его
 // в любое приложение, принимающее текст, — например, в «Заметки» Xiaomi.
@@ -498,6 +593,8 @@ $('#import').addEventListener('change', async (e) => {
 });
 
 // ---------- Старт ----------
+document.body.dataset.view = 'log';
+renderTimer();
 renderDraft();
 // ---------- Обновления ----------
 // Установленное приложение Android держит в памяти, поэтому сами проверяем
