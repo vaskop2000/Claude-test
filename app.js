@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 11; // увеличивать вместе с CACHE в sw.js
+const VERSION = 12; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -291,31 +291,12 @@ function seriesFor(name) {
 // Цвета линий подходов: 1-й, 2-й, 3-й… (различимы в светлой и тёмной теме)
 const SET_COLORS = ['#d97757', '#3b82f6', '#22a06b', '#a855f7', '#e5484d', '#0ea5a5', '#d4a017', '#8b8b8b'];
 
-// Для упражнения: lines[k] — k-й вес каждой тренировки, от старых к новым.
-// Подходы подряд с одним весом объединяются в одну точку (повторения
-// суммируются); отдельная линия появляется только когда вес меняется.
-function setLines(name) {
-  const list = workouts
+// Тренировки с упражнением (от старых к новым) и подходы каждой из них
+function exerciseSessions(name) {
+  return workouts
     .filter((w) => w.exercises.some((e) => e.name === name))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
-  const lines = [];
-  for (const w of list) {
-    const ex = w.exercises.find((e) => e.name === name);
-    const groups = [];
-    for (const s of ex.sets) {
-      const g = groups[groups.length - 1];
-      if (g && g.w === s.w) { g.r += s.r; g.n++; } else groups.push({ date: w.date, w: s.w, r: s.r, n: 1 });
-    }
-    groups.forEach((g, k) => (lines[k] = lines[k] || []).push(g));
-  }
-  return lines;
-}
-
-// «Красивый» шаг делений оси: 1, 2, 2.5, 5 × 10ⁿ
-function niceStep(range, maxTicks) {
-  const raw = range / maxTicks;
-  const p = 10 ** Math.floor(Math.log10(raw));
-  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((st) => st >= raw);
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
+    .map((w) => ({ date: w.date, sets: w.exercises.find((e) => e.name === name).sets }));
 }
 
 function renderProgress() {
@@ -327,54 +308,76 @@ function renderProgress() {
 
   if (!names.length) {
     $('#chart').innerHTML = '<div class="empty">Сохраните тренировки, чтобы увидеть прогресс</div>';
-    $('#chart-legend').innerHTML = '';
     return;
   }
-  const lines = setLines(sel.value);
-  $('#chart').innerHTML = setsChartSVG(lines);
-  $('#chart-legend').innerHTML = lines.map((_, k) =>
-    `<span><i style="background:${SET_COLORS[k % SET_COLORS.length]}"></i>${k ? `${k + 1}-й вес` : 'Рабочий вес'}</span>`).join('');
+  renderSetCharts(exerciseSessions(sel.value));
 }
 
-function setsChartSVG(lines) {
-  const W = 340, H = 260, P = { l: 40, r: 14, t: 14, b: 38 };
-  const pts = lines.flat();
-  let x0 = Math.min(...pts.map((p) => p.r)), x1 = Math.max(...pts.map((p) => p.r));
-  let y0 = Math.min(...pts.map((p) => p.w)), y1 = Math.max(...pts.map((p) => p.w));
-  x0 = Math.max(0, x0 - 1); x1 += 1;
-  if (y1 === 0) y1 = 10; // упражнения с собственным весом (0 кг)
-  const yStep = niceStep(Math.max(y1 - y0, 4), 4);
-  y0 = Math.max(0, Math.floor(y0 / yStep) * yStep - (y0 % yStep === 0 ? yStep : 0));
-  y1 = Math.ceil(y1 / yStep) * yStep + (y1 % yStep === 0 ? yStep : 0);
-  const xStep = Math.max(1, Math.ceil((x1 - x0) / 8));
+// Мини-график на каждый подход (1-й, 2-й, …), строго друг под другом:
+// X — тренировки по датам (общая ось для всех), Y — вес, над точкой — повторения.
+// Если тренировок много, графики прокручиваются вбок синхронно.
+function renderSetCharts(sessions) {
+  const nSets = Math.max(...sessions.map((s) => s.sets.length));
+  const AXIS = 40, STEP = 46, PAD = 22;
+  const PH = 96, TOP = 20, BOT = 10, DATES = 22; // высота панели, отступы
+  const avail = Math.max(240, $('#chart').clientWidth - AXIS);
+  const plotW = Math.max(avail, PAD * 2 + (sessions.length - 1) * STEP);
+  const X = (i) => (sessions.length === 1 ? plotW / 2 : PAD + (i * (plotW - PAD * 2)) / (sessions.length - 1));
+  const short = (iso) => iso.slice(8, 10) + '.' + iso.slice(5, 7);
 
-  const X = (v) => P.l + ((v - x0) / (x1 - x0)) * (W - P.l - P.r);
-  const Y = (v) => P.t + (1 - (v - y0) / (y1 - y0)) * (H - P.t - P.b);
-  let grid = '';
-  for (let v = y0; v <= y1 + 1e-9; v += yStep) {
-    grid += `<line class="grid" x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}"/>
-      <text class="lbl-t" x="${P.l - 6}" y="${Y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
-  }
-  for (let v = Math.ceil(x0); v <= x1; v += xStep) {
-    grid += `<text class="lbl-t" x="${X(v)}" y="${H - P.b + 16}" text-anchor="middle">${v}</text>`;
-  }
-  const series = lines.map((line, k) => {
+  const panels = [];
+  for (let k = 0; k < nSets; k++) {
     const c = SET_COLORS[k % SET_COLORS.length];
-    const d = line.map((p, i) => `${i ? 'L' : 'M'}${X(p.r).toFixed(1)},${Y(p.w).toFixed(1)}`).join('');
-    const dots = line.map((p, i) => {
-      const last = i === line.length - 1;
-      return `<circle cx="${X(p.r).toFixed(1)}" cy="${Y(p.w).toFixed(1)}" r="${last ? 7 : 3.5}" fill="${c}"/>` +
-        (last ? `<text class="dot-n" x="${X(p.r).toFixed(1)}" y="${(Y(p.w) + 3.5).toFixed(1)}">${k + 1}</text>` : '');
+    const pts = sessions.map((s, i) => s.sets[k] && { i, w: s.sets[k].w, r: s.sets[k].r }).filter(Boolean);
+    const ws = pts.map((p) => p.w);
+    let lo = Math.min(...ws), hi = Math.max(...ws);
+    const span = hi - lo || Math.max(hi * 0.1, 5);
+    const y0 = lo - span * 0.15, y1 = hi + span * 0.15;
+    const isLast = k === nSets - 1;
+    const H = PH + (isLast ? DATES : 0);
+    const Y = (v) => (hi === lo ? TOP + (PH - TOP - BOT) / 2 : TOP + (1 - (v - y0) / (y1 - y0)) * (PH - TOP - BOT));
+
+    const levels = [...new Set([lo, hi])];
+    const axis = levels.map((v) => `<text class="lbl-t" x="${AXIS - 6}" y="${Y(v) + 4}" text-anchor="end">${fmt(v)}</text>`).join('');
+    const grid = levels.map((v) => `<line class="grid" x1="0" x2="${plotW}" y1="${Y(v)}" y2="${Y(v)}"/>`).join('') +
+      sessions.map((_, i) => `<line class="vgrid" x1="${X(i)}" x2="${X(i)}" y1="${TOP - 4}" y2="${PH - BOT + 4}"/>`).join('');
+    const path = pts.map((p, j) => `${j ? 'L' : 'M'}${X(p.i).toFixed(1)},${Y(p.w).toFixed(1)}`).join('');
+    const dots = pts.map((p, j) => {
+      const last = j === pts.length - 1;
+      return `<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.w).toFixed(1)}" r="${last ? 5 : 3.5}" fill="${c}"/>
+        <text class="reps" x="${X(p.i).toFixed(1)}" y="${(Y(p.w) - 9).toFixed(1)}">${p.r}</text>`;
     }).join('');
-    return `<path d="${d}" fill="none" stroke="${c}" stroke-width="2" stroke-opacity=".8" stroke-linejoin="round"/>${dots}`;
-  }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Вес и повторения: отдельная линия для каждого веса">
-    ${grid}
-    <line class="axis" x1="${P.l}" y1="${H - P.b}" x2="${W - P.r}" y2="${H - P.b}"/>
-    <text class="lbl-a" x="${P.l}" y="${P.t - 4}">кг</text>
-    <text class="lbl-a" x="${W - P.r}" y="${H - 4}" text-anchor="end">повторения</text>
-    ${series}
-  </svg>`;
+    const dates = isLast
+      ? sessions.map((s, i) => `<text class="lbl-t" x="${X(i)}" y="${PH + 12}" text-anchor="middle">${short(s.date)}</text>`).join('')
+      : '';
+
+    panels.push(`
+      <div class="mini">
+        <div class="mini-title"><i style="background:${c}"></i>Подход ${k + 1}</div>
+        <div class="mini-row">
+          <svg class="mini-axis" width="${AXIS}" height="${H}">${axis}</svg>
+          <div class="mini-scroll">
+            <svg width="${plotW}" height="${H}">${grid}
+              <path d="${path}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>${dots}${dates}
+            </svg>
+          </div>
+        </div>
+      </div>`);
+  }
+  $('#chart').innerHTML = `<div class="minis">${panels.join('')}</div>`;
+
+  // Синхронная прокрутка; по умолчанию показываем последние тренировки
+  const scrollers = [...document.querySelectorAll('#chart .mini-scroll')];
+  let syncing = false;
+  scrollers.forEach((el) => {
+    el.scrollLeft = el.scrollWidth;
+    el.addEventListener('scroll', () => {
+      if (syncing) return;
+      syncing = true;
+      scrollers.forEach((o) => { if (o !== el) o.scrollLeft = el.scrollLeft; });
+      requestAnimationFrame(() => { syncing = false; });
+    });
+  });
 }
 
 $('#progress-ex').addEventListener('change', renderProgress);

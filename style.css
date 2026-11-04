@@ -119,14 +119,18 @@ textarea { resize: vertical; margin: 12px 0; }
 
 /* Прогресс */
 #chart { margin-top: 12px; }
-#chart svg { width: 100%; height: auto; display: block; }
-#chart .axis { stroke: var(--muted); }
 #chart .grid { stroke: var(--line); }
+#chart .vgrid { stroke: var(--line); stroke-dasharray: 2 3; }
 #chart .lbl-t { fill: var(--muted); font-size: 11px; }
-#chart .lbl-a { fill: var(--muted); font-size: 10px; }
-#chart .dot-n { fill: #fff; font-size: 9px; font-weight: 700; text-anchor: middle; }
-#chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 14px; }
-#chart-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+#chart .reps { fill: var(--fg); font-size: 11px; font-weight: 700; text-anchor: middle; }
+.mini + .mini { margin-top: 6px; }
+.mini-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.mini-title i { width: 10px; height: 10px; border-radius: 50%; }
+.mini-row { display: flex; }
+.mini-axis { flex: 0 0 auto; }
+.mini-scroll { overflow-x: auto; flex: 1; scrollbar-width: none; }
+.mini-scroll::-webkit-scrollbar { display: none; }
+.mini-scroll svg { display: block; }
 .chart-hint { font-size: 12px; margin-top: 10px; }
 
 /* Claude */
