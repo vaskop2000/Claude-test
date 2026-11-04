@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 10; // увеличивать вместе с CACHE в sw.js
+const VERSION = 11; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -291,7 +291,9 @@ function seriesFor(name) {
 // Цвета линий подходов: 1-й, 2-й, 3-й… (различимы в светлой и тёмной теме)
 const SET_COLORS = ['#d97757', '#3b82f6', '#22a06b', '#a855f7', '#e5484d', '#0ea5a5', '#d4a017', '#8b8b8b'];
 
-// Для упражнения: lines[k] — k-й подход каждой тренировки, от старых к новым
+// Для упражнения: lines[k] — k-й вес каждой тренировки, от старых к новым.
+// Подходы подряд с одним весом объединяются в одну точку (повторения
+// суммируются); отдельная линия появляется только когда вес меняется.
 function setLines(name) {
   const list = workouts
     .filter((w) => w.exercises.some((e) => e.name === name))
@@ -299,7 +301,12 @@ function setLines(name) {
   const lines = [];
   for (const w of list) {
     const ex = w.exercises.find((e) => e.name === name);
-    ex.sets.forEach((s, k) => (lines[k] = lines[k] || []).push({ date: w.date, w: s.w, r: s.r }));
+    const groups = [];
+    for (const s of ex.sets) {
+      const g = groups[groups.length - 1];
+      if (g && g.w === s.w) { g.r += s.r; g.n++; } else groups.push({ date: w.date, w: s.w, r: s.r, n: 1 });
+    }
+    groups.forEach((g, k) => (lines[k] = lines[k] || []).push(g));
   }
   return lines;
 }
@@ -326,7 +333,7 @@ function renderProgress() {
   const lines = setLines(sel.value);
   $('#chart').innerHTML = setsChartSVG(lines);
   $('#chart-legend').innerHTML = lines.map((_, k) =>
-    `<span><i style="background:${SET_COLORS[k % SET_COLORS.length]}"></i>Подход ${k + 1}</span>`).join('');
+    `<span><i style="background:${SET_COLORS[k % SET_COLORS.length]}"></i>${k ? `${k + 1}-й вес` : 'Рабочий вес'}</span>`).join('');
 }
 
 function setsChartSVG(lines) {
@@ -361,7 +368,7 @@ function setsChartSVG(lines) {
     }).join('');
     return `<path d="${d}" fill="none" stroke="${c}" stroke-width="2" stroke-opacity=".8" stroke-linejoin="round"/>${dots}`;
   }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Вес по повторениям для каждого подхода">
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Вес и повторения: отдельная линия для каждого веса">
     ${grid}
     <line class="axis" x1="${P.l}" y1="${H - P.b}" x2="${W - P.r}" y2="${H - P.b}"/>
     <text class="lbl-a" x="${P.l}" y="${P.t - 4}">кг</text>
