@@ -118,22 +118,16 @@ textarea { resize: vertical; margin: 12px 0; }
 .empty { color: var(--muted); text-align: center; padding: 48px 0; }
 
 /* Прогресс */
-.seg { display: flex; gap: 6px; margin: 12px 0; }
-.seg button {
-  flex: 1; font: inherit; font-size: 14px; padding: 8px;
-  background: none; color: var(--muted);
-  border: 1px solid var(--line); border-radius: 10px;
-}
-.seg button.on { color: var(--fg); border-color: var(--fg); }
+#chart { margin-top: 12px; }
 #chart svg { width: 100%; height: auto; display: block; }
-#chart .axis { stroke: var(--line); }
+#chart .axis { stroke: var(--muted); }
+#chart .grid { stroke: var(--line); }
 #chart .lbl-t { fill: var(--muted); font-size: 11px; }
-#chart .line { fill: none; stroke: var(--accent); stroke-width: 2.5; }
-#chart .dot { fill: var(--accent); }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
-.stat { background: var(--card); border-radius: 12px; padding: 12px; }
-.stat div { color: var(--muted); font-size: 12px; }
-.stat b { font-size: 20px; }
+#chart .lbl-a { fill: var(--muted); font-size: 10px; }
+#chart .dot-n { fill: #fff; font-size: 9px; font-weight: 700; text-anchor: middle; }
+#chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 14px; }
+#chart-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.chart-hint { font-size: 12px; margin-top: 10px; }
 
 /* Claude */
 pre {

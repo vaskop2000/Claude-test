@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 9; // увеличивать вместе с CACHE в sw.js
+const VERSION = 10; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -14,7 +14,6 @@ const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
 let workouts = load(KEY, []);
 let draft = load(DRAFT_KEY, null) || newDraft();
-let metric = 'e1rm';
 
 function newDraft() {
   return { title: '', date: today(), note: '', exercises: [] };
@@ -289,6 +288,29 @@ function seriesFor(name) {
   return [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, v]) => ({ date, ...v }));
 }
 
+// Цвета линий подходов: 1-й, 2-й, 3-й… (различимы в светлой и тёмной теме)
+const SET_COLORS = ['#d97757', '#3b82f6', '#22a06b', '#a855f7', '#e5484d', '#0ea5a5', '#d4a017', '#8b8b8b'];
+
+// Для упражнения: lines[k] — k-й подход каждой тренировки, от старых к новым
+function setLines(name) {
+  const list = workouts
+    .filter((w) => w.exercises.some((e) => e.name === name))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+  const lines = [];
+  for (const w of list) {
+    const ex = w.exercises.find((e) => e.name === name);
+    ex.sets.forEach((s, k) => (lines[k] = lines[k] || []).push({ date: w.date, w: s.w, r: s.r }));
+  }
+  return lines;
+}
+
+// «Красивый» шаг делений оси: 1, 2, 2.5, 5 × 10ⁿ
+function niceStep(range, maxTicks) {
+  const raw = range / maxTicks;
+  const p = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((st) => st >= raw);
+}
+
 function renderProgress() {
   const names = exerciseNames();
   const sel = $('#progress-ex');
@@ -298,51 +320,57 @@ function renderProgress() {
 
   if (!names.length) {
     $('#chart').innerHTML = '<div class="empty">Сохраните тренировки, чтобы увидеть прогресс</div>';
-    $('#progress-stats').innerHTML = '';
+    $('#chart-legend').innerHTML = '';
     return;
   }
-  const data = seriesFor(sel.value);
-  $('#chart').innerHTML = chartSVG(data.map((d) => ({ x: d.date, y: d[metric] })));
-
-  const first = data[0][metric], last = data[data.length - 1][metric];
-  const best = Math.max(...data.map((d) => d[metric]));
-  const diff = first ? ((last - first) / first) * 100 : 0;
-  $('#progress-stats').innerHTML = `
-    <div class="stat"><div>Рекорд</div><b>${fmt(best)}</b></div>
-    <div class="stat"><div>Последний</div><b>${fmt(last)}</b></div>
-    <div class="stat"><div>Изменение</div><b>${diff >= 0 ? '+' : ''}${fmt(diff)}%</b></div>`;
+  const lines = setLines(sel.value);
+  $('#chart').innerHTML = setsChartSVG(lines);
+  $('#chart-legend').innerHTML = lines.map((_, k) =>
+    `<span><i style="background:${SET_COLORS[k % SET_COLORS.length]}"></i>Подход ${k + 1}</span>`).join('');
 }
 
-function chartSVG(points) {
-  const W = 340, H = 200, P = { l: 36, r: 10, t: 12, b: 24 };
-  if (points.length < 2) {
-    return `<div class="empty">Нужно минимум 2 тренировки с этим упражнением${points.length ? ` (сейчас: ${fmt(points[0].y)})` : ''}</div>`;
+function setsChartSVG(lines) {
+  const W = 340, H = 260, P = { l: 40, r: 14, t: 14, b: 38 };
+  const pts = lines.flat();
+  let x0 = Math.min(...pts.map((p) => p.r)), x1 = Math.max(...pts.map((p) => p.r));
+  let y0 = Math.min(...pts.map((p) => p.w)), y1 = Math.max(...pts.map((p) => p.w));
+  x0 = Math.max(0, x0 - 1); x1 += 1;
+  if (y1 === 0) y1 = 10; // упражнения с собственным весом (0 кг)
+  const yStep = niceStep(Math.max(y1 - y0, 4), 4);
+  y0 = Math.max(0, Math.floor(y0 / yStep) * yStep - (y0 % yStep === 0 ? yStep : 0));
+  y1 = Math.ceil(y1 / yStep) * yStep + (y1 % yStep === 0 ? yStep : 0);
+  const xStep = Math.max(1, Math.ceil((x1 - x0) / 8));
+
+  const X = (v) => P.l + ((v - x0) / (x1 - x0)) * (W - P.l - P.r);
+  const Y = (v) => P.t + (1 - (v - y0) / (y1 - y0)) * (H - P.t - P.b);
+  let grid = '';
+  for (let v = y0; v <= y1 + 1e-9; v += yStep) {
+    grid += `<line class="grid" x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}"/>
+      <text class="lbl-t" x="${P.l - 6}" y="${Y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
   }
-  const ys = points.map((p) => p.y);
-  let min = Math.min(...ys), max = Math.max(...ys);
-  if (min === max) { min -= 1; max += 1; }
-  const pad = (max - min) * 0.1; min -= pad; max += pad;
-  const X = (i) => P.l + (i / (points.length - 1)) * (W - P.l - P.r);
-  const Y = (v) => P.t + (1 - (v - min) / (max - min)) * (H - P.t - P.b);
-  const path = points.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(p.y).toFixed(1)}`).join('');
-  const dots = points.map((p, i) => `<circle class="dot" cx="${X(i)}" cy="${Y(p.y)}" r="3"/>`).join('');
-  const short = (iso) => iso.slice(8, 10) + '.' + iso.slice(5, 7);
-  return `<svg viewBox="0 0 ${W} ${H}" role="img">
+  for (let v = Math.ceil(x0); v <= x1; v += xStep) {
+    grid += `<text class="lbl-t" x="${X(v)}" y="${H - P.b + 16}" text-anchor="middle">${v}</text>`;
+  }
+  const series = lines.map((line, k) => {
+    const c = SET_COLORS[k % SET_COLORS.length];
+    const d = line.map((p, i) => `${i ? 'L' : 'M'}${X(p.r).toFixed(1)},${Y(p.w).toFixed(1)}`).join('');
+    const dots = line.map((p, i) => {
+      const last = i === line.length - 1;
+      return `<circle cx="${X(p.r).toFixed(1)}" cy="${Y(p.w).toFixed(1)}" r="${last ? 7 : 3.5}" fill="${c}"/>` +
+        (last ? `<text class="dot-n" x="${X(p.r).toFixed(1)}" y="${(Y(p.w) + 3.5).toFixed(1)}">${k + 1}</text>` : '');
+    }).join('');
+    return `<path d="${d}" fill="none" stroke="${c}" stroke-width="2" stroke-opacity=".8" stroke-linejoin="round"/>${dots}`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Вес по повторениям для каждого подхода">
+    ${grid}
     <line class="axis" x1="${P.l}" y1="${H - P.b}" x2="${W - P.r}" y2="${H - P.b}"/>
-    <text class="lbl-t" x="${P.l - 6}" y="${Y(max - pad) + 4}" text-anchor="end">${Math.round(max - pad)}</text>
-    <text class="lbl-t" x="${P.l - 6}" y="${Y(min + pad) + 4}" text-anchor="end">${Math.round(min + pad)}</text>
-    <text class="lbl-t" x="${P.l}" y="${H - 6}">${short(points[0].x)}</text>
-    <text class="lbl-t" x="${W - P.r}" y="${H - 6}" text-anchor="end">${short(points[points.length - 1].x)}</text>
-    <path class="line" d="${path}"/>${dots}
+    <text class="lbl-a" x="${P.l}" y="${P.t - 4}">кг</text>
+    <text class="lbl-a" x="${W - P.r}" y="${H - 4}" text-anchor="end">повторения</text>
+    ${series}
   </svg>`;
 }
 
 $('#progress-ex').addEventListener('change', renderProgress);
-document.querySelectorAll('#metric-seg button').forEach((b) => b.addEventListener('click', () => {
-  metric = b.dataset.metric;
-  document.querySelectorAll('#metric-seg button').forEach((x) => x.classList.toggle('on', x === b));
-  renderProgress();
-}));
 
 // ---------- Claude ----------
 const PRESETS = {
