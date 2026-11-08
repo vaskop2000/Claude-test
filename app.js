@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 12; // увеличивать вместе с CACHE в sw.js
+const VERSION = 13; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -54,7 +54,7 @@ function lastSetsFor(name) {
 }
 
 // ---------- Навигация ----------
-const TITLES = { log: 'Тренировка', history: 'История', progress: 'Прогресс', claude: 'Анализ Claude' };
+const TITLES = { log: 'Тренировка', history: 'История', progress: 'Прогресс', guide: 'Техника', claude: 'Анализ Claude' };
 
 function show(view) {
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
@@ -64,6 +64,7 @@ function show(view) {
   if (view === 'history') renderHistory();
   if (view === 'progress') renderProgress();
   if (view === 'claude') renderPreview();
+  if (view === 'guide') renderGuideList();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => show(b.dataset.view)));
@@ -119,6 +120,7 @@ function renderDraft() {
       <div class="ex">
         <div class="ex-head">
           <input class="ex-title" value="${esc(ex.name)}" data-name="${i}" list="ex-list" aria-label="Название упражнения" autocomplete="off">
+          ${findExercise(ex.name) ? `<button class="btn ghost info" data-guide="${esc(ex.name)}" aria-label="Техника">?</button>` : ''}
           <button class="btn ghost" data-del-ex="${i}">Удалить</button>
         </div>
         ${hint}
@@ -128,7 +130,8 @@ function renderDraft() {
   }).join('');
 }
 
-const canonicalName = (name) => exerciseNames().find((n) => n.toLowerCase() === name.toLowerCase()) || name;
+const canonicalName = (name) =>
+  exerciseNames().find((n) => n.toLowerCase() === name.toLowerCase()) || findExercise(name)?.name || name;
 
 $('#draft-exercises').addEventListener('input', (e) => {
   if (e.target.dataset.name !== undefined) {
@@ -159,6 +162,7 @@ $('#draft-exercises').addEventListener('keydown', (e) => {
 
 $('#draft-exercises').addEventListener('click', (e) => {
   const t = e.target;
+  if (t.dataset.guide) return openGuide(findExercise(t.dataset.guide), true);
   if (t.dataset.addSet !== undefined) {
     const sets = draft.exercises[t.dataset.addSet].sets;
     const prev = sets[sets.length - 1] || { w: '', r: '' };
@@ -177,15 +181,19 @@ $('#add-ex-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const name = $('#ex-name').value.trim();
   if (!name) return;
+  addExercise(name);
+  $('#ex-name').value = '';
+});
+
+function addExercise(name) {
   // Используем каноническое написание, если упражнение уже встречалось
   const known = canonicalName(name);
   const last = lastSetsFor(known);
   const first = last ? last.sets[0] : { w: '', r: '' };
   draft.exercises.push({ name: known, sets: [{ w: String(first.w), r: String(first.r) }] });
-  $('#ex-name').value = '';
   persistDraft();
   renderDraft();
-});
+}
 
 $('#w-date').addEventListener('change', (e) => { draft.date = e.target.value || today(); persistDraft(); });
 $('#w-note').addEventListener('input', (e) => { draft.note = e.target.value; persistDraft(); });
@@ -381,6 +389,71 @@ function renderSetCharts(sessions) {
 }
 
 $('#progress-ex').addEventListener('change', renderProgress);
+
+// ---------- Справочник техники ----------
+let guideGroup = '';
+
+function renderGuideList() {
+  $('#guide-detail').hidden = true;
+  $('#guide-list').hidden = false;
+  $('#title').textContent = TITLES.guide;
+  $('#guide-groups').innerHTML = ['', ...EX_GROUPS].map((g) =>
+    `<button data-group="${g}" class="${g === guideGroup ? 'on' : ''}">${g || 'Все'}</button>`).join('');
+  const q = normName($('#guide-search').value);
+  const items = EXERCISES.filter((ex) =>
+    (!guideGroup || ex.group === guideGroup) &&
+    (!q || [ex.name, ...ex.aliases].some((n) => normName(n).includes(q))));
+  $('#guide-items').innerHTML = items.length
+    ? items.map((ex) => `
+      <button class="guide-item" data-ex="${esc(ex.name)}">
+        <b>${esc(ex.name)}</b>
+        <span class="muted">${ex.primary.map((m) => MUSCLES[m]).join(', ')}</span>
+      </button>`).join('')
+    : '<div class="empty">Ничего не найдено</div>';
+}
+
+// fromLog — открыли кнопкой «?» из тренировки: «назад» вернёт туда
+function openGuide(ex, fromLog = false) {
+  if (!ex) return;
+  if (!$('#view-guide').classList.contains('active')) show('guide');
+  $('#guide-list').hidden = true;
+  const d = $('#guide-detail');
+  d.hidden = false;
+  d.dataset.back = fromLog ? 'log' : 'list';
+  $('#title').textContent = ex.name;
+  const names = (ms) => ms.map((m) => MUSCLES[m]).join(', ');
+  d.innerHTML = `
+    <button class="btn ghost back" id="guide-back">← ${fromLog ? 'К тренировке' : 'Все упражнения'}</button>
+    ${bodySVG(ex.primary, ex.secondary)}
+    <div class="muscle-legend">
+      <div><i class="mp"></i><span><b>Основные:</b> ${names(ex.primary)}</span></div>
+      ${ex.secondary.length ? `<div><i class="ms"></i><span><b>Помогают:</b> ${names(ex.secondary)}</span></div>` : ''}
+    </div>
+    <h3>Техника</h3>
+    <ol>${ex.technique.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>
+    <h3>Частые ошибки</h3>
+    <ul>${ex.mistakes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+    ${fromLog ? '' : `<button class="btn primary wide" id="guide-add">Добавить в тренировку</button>`}
+    <p class="muted small">Общие рекомендации. При боли или травмах проконсультируйтесь с тренером или врачом.</p>`;
+  window.scrollTo(0, 0);
+  $('#guide-back').addEventListener('click', () => (d.dataset.back === 'log' ? show('log') : renderGuideList()));
+  $('#guide-add')?.addEventListener('click', () => {
+    addExercise(ex.name);
+    show('log');
+    toast(`Добавлено: ${ex.name}`);
+  });
+}
+
+$('#guide-search').addEventListener('input', renderGuideList);
+$('#guide-groups').addEventListener('click', (e) => {
+  if (e.target.dataset.group === undefined) return;
+  guideGroup = e.target.dataset.group;
+  renderGuideList();
+});
+$('#guide-items').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ex]');
+  if (b) openGuide(findExercise(b.dataset.ex));
+});
 
 // ---------- Claude ----------
 const PRESETS = {

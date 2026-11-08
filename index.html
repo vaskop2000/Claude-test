@@ -47,6 +47,16 @@
       <p class="muted chart-hint">Каждый подход — отдельный график: по горизонтали дни тренировок, по вертикали вес, цифра над точкой — повторения. Если тренировок много, графики листаются вбок.</p>
     </section>
 
+    <!-- Справочник техники -->
+    <section id="view-guide" class="view">
+      <div id="guide-list">
+        <input id="guide-search" type="search" placeholder="Поиск упражнения" autocomplete="off">
+        <div class="chips" id="guide-groups"></div>
+        <div id="guide-items"></div>
+      </div>
+      <div id="guide-detail" hidden></div>
+    </section>
+
     <!-- Claude -->
     <section id="view-claude" class="view">
       <p class="muted">Приложение соберёт ваши тренировки в запрос и передаст его в Claude — анализ идёт в рамках вашей подписки Claude Pro, без API-ключей.</p>
@@ -107,10 +117,12 @@
     <button data-view="log" class="on">Сегодня</button>
     <button data-view="history">История</button>
     <button data-view="progress">Прогресс</button>
+    <button data-view="guide">Техника</button>
     <button data-view="claude">Claude</button>
   </nav>
 
   <div id="toast"></div>
+  <script src="exercises.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

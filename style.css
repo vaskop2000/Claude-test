@@ -5,6 +5,9 @@
   --line: #e6e6e6;
   --card: #f6f6f6;
   --accent: #d97757;
+  --accent-soft: #f0b8a3;
+  --muscle: #d4d4d4;
+  --body: #ececec;
   --danger: #c0392b;
   color-scheme: light dark;
 }
@@ -15,6 +18,9 @@
     --muted: #8a8a8a;
     --line: #262626;
     --card: #1a1a1a;
+    --accent-soft: #8c4b36;
+    --muscle: #3a3a3a;
+    --body: #242424;
   }
 }
 
@@ -191,6 +197,38 @@ body[data-view="log"] #timer { display: block; }
 #timer.done button { background: rgba(255,255,255,.2); border-color: transparent; }
 #timer.done #t-plus { display: none; }
 #timer.done #t-left { font-size: 20px; }
+
+/* Справочник техники */
+#guide-search { margin-bottom: 10px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-bottom: 6px; }
+.chips::-webkit-scrollbar { display: none; }
+.chips button {
+  flex: 0 0 auto; font: inherit; font-size: 14px; padding: 6px 12px;
+  background: none; color: var(--muted); border: 1px solid var(--line); border-radius: 16px;
+}
+.chips button.on { color: var(--fg); border-color: var(--fg); }
+.guide-item {
+  display: block; width: 100%; text-align: left; font: inherit; color: var(--fg);
+  background: none; border: none; border-top: 1px solid var(--line); padding: 12px 0;
+}
+.guide-item b { display: block; font-size: 16px; }
+.guide-item span { font-size: 13px; }
+.btn.info { width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 50%; font-size: 15px; }
+.back { padding-left: 0; }
+#guide-detail h3 { margin: 18px 0 6px; font-size: 17px; }
+#guide-detail ol, #guide-detail ul { margin: 0; padding-left: 20px; }
+#guide-detail li { margin: 4px 0; }
+.small { font-size: 12px; margin-top: 14px; }
+.bodymap { width: 100%; max-width: 360px; display: block; margin: 4px auto 8px; }
+.bodymap .body { fill: var(--body); }
+.bodymap .mo { fill: var(--muscle); }
+.bodymap .mp, .muscle-legend .mp { fill: var(--accent); background: var(--accent); }
+.bodymap .ms, .muscle-legend .ms { fill: var(--accent-soft); background: var(--accent-soft); }
+.bodymap .mo *, .bodymap .mp *, .bodymap .ms * { stroke: var(--bg); stroke-width: .6; }
+.bodymap .body-lbl { font-size: 8px; fill: var(--muted); text-anchor: middle; }
+.muscle-legend { font-size: 14px; }
+.muscle-legend div { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }
+.muscle-legend i { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 
 #toast {
   position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
