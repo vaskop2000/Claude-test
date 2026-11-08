@@ -59,7 +59,7 @@
 
     <!-- Claude -->
     <section id="view-claude" class="view">
-      <p class="muted">Приложение соберёт ваши тренировки в запрос и передаст его в Claude — анализ идёт в рамках вашей подписки Claude Pro, без API-ключей.</p>
+      <p class="muted">Приложение соберёт ваши тренировки в готовый запрос. Скопируйте его и вставьте в чат с Claude — анализ пойдёт в рамках вашей подписки, без API-ключей.</p>
       <label class="lbl">Период</label>
       <select id="ai-period">
         <option value="14">2 недели</option>
@@ -76,9 +76,7 @@
         <option value="custom">Свой вопрос…</option>
       </select>
       <textarea id="ai-custom" rows="3" placeholder="Например: готов ли я к 100 кг в жиме?" hidden></textarea>
-      <button id="ai-share" class="btn primary wide">Отправить в приложение Claude</button>
-      <button id="ai-open" class="btn wide">Открыть в claude.ai</button>
-      <button id="ai-copy" class="btn wide">Скопировать запрос</button>
+      <button id="ai-copy" class="btn primary wide">Скопировать запрос</button>
       <details>
         <summary>Предпросмотр запроса</summary>
         <pre id="ai-preview"></pre>
@@ -118,7 +116,7 @@
     <button data-view="history">История</button>
     <button data-view="progress">Прогресс</button>
     <button data-view="guide">Техника</button>
-    <button data-view="claude">Claude</button>
+    <button data-view="claude">Анализ</button>
   </nav>
 
   <div id="toast"></div>

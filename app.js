@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 18; // увеличивать вместе с CACHE в sw.js
+const VERSION = 19; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -54,7 +54,7 @@ function lastSetsFor(name) {
 }
 
 // ---------- Навигация ----------
-const TITLES = { log: 'Тренировка', history: 'История', progress: 'Прогресс', guide: 'Техника', claude: 'Анализ Claude' };
+const TITLES = { log: 'Тренировка', history: 'История', progress: 'Прогресс', guide: 'Техника', claude: 'Анализ' };
 
 function show(view) {
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + view));
@@ -550,33 +550,8 @@ async function copyPrompt(text) {
   try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
 }
 
-// Системное меню «Поделиться» Android → выбрать приложение Claude.
-// Запрос откроется в Claude с вашим аккаунтом Pro.
-$('#ai-share').addEventListener('click', async () => {
-  const text = buildPrompt();
-  if (navigator.share) {
-    try { await navigator.share({ text }); return; }
-    catch (e) { if (e.name === 'AbortError') return; }
-  }
-  await copyPrompt(text);
-  toast('Скопировано — вставьте в Claude');
-});
-
-// claude.ai/new?q=… открывает новый чат с готовым запросом.
-// Очень длинные запросы не влезают в URL — тогда копируем в буфер.
-$('#ai-open').addEventListener('click', async () => {
-  const text = buildPrompt();
-  if (text.length < 6000) {
-    window.open('https://claude.ai/new?q=' + encodeURIComponent(text), '_blank');
-  } else {
-    await copyPrompt(text);
-    toast('Запрос длинный — скопирован, вставьте в чат');
-    window.open('https://claude.ai/new', '_blank');
-  }
-});
-
 $('#ai-copy').addEventListener('click', async () => {
-  toast((await copyPrompt(buildPrompt())) ? 'Скопировано' : 'Не удалось скопировать');
+  toast((await copyPrompt(buildPrompt())) ? 'Скопировано — вставьте в чат с Claude' : 'Не удалось скопировать');
 });
 
 // ---------- Таймер отдыха ----------
