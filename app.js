@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 16; // увеличивать вместе с CACHE в sw.js
+const VERSION = 17; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
