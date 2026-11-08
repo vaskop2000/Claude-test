@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 17; // увеличивать вместе с CACHE в sw.js
+const VERSION = 18; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -48,7 +48,7 @@ function lastSetsFor(name) {
     // Подсказываем только более ранние тренировки и не саму редактируемую
     if (w.id === draft.editId || w.date > draft.date) continue;
     const ex = w.exercises.find((e) => e.name.toLowerCase() === name.toLowerCase());
-    if (ex) return { date: w.date, sets: ex.sets };
+    if (ex) return { date: w.date, sets: ex.sets, note: ex.note };
   }
   return null;
 }
@@ -72,14 +72,20 @@ document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click
 // ---------- Текущая тренировка ----------
 function persistDraft() { save(DRAFT_KEY, draft); }
 
-const toDraftExercises = (w) =>
-  w.exercises.map((ex) => ({ name: ex.name, sets: ex.sets.map((s) => ({ w: String(s.w), r: String(s.r) })) }));
+// withNotes: при редактировании заметки к упражнениям сохраняем, при «Повторить» — нет
+// (прошлая заметка и так видна в подсказке «Прошлый раз»)
+const toDraftExercises = (w, withNotes = false) =>
+  w.exercises.map((ex) => ({
+    name: ex.name,
+    sets: ex.sets.map((s) => ({ w: String(s.w), r: String(s.r) })),
+    ...(withNotes && ex.note ? { note: ex.note } : {}),
+  }));
 const draftIsEmpty = () => !draft.exercises.length && !(draft.title || '').trim() && !draft.note.trim();
 
 function startEdit(w) {
   // Недописанную новую тренировку откладываем, чтобы вернуть её после редактирования
   if (!draft.editId && !draftIsEmpty()) save(STASH_KEY, draft);
-  draft = { editId: w.id, title: w.title || '', date: w.date, note: w.note || '', exercises: toDraftExercises(w) };
+  draft = { editId: w.id, title: w.title || '', date: w.date, note: w.note || '', exercises: toDraftExercises(w, true) };
   persistDraft();
   renderDraft();
   show('log');
@@ -106,7 +112,8 @@ function renderDraft() {
   $('#draft-exercises').innerHTML = draft.exercises.map((ex, i) => {
     const last = lastSetsFor(ex.name);
     const hint = last
-      ? `<div class="ex-hint">Прошлый раз (${fmtDate(last.date)}): ${last.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(', ')}</div>`
+      ? `<div class="ex-hint">Прошлый раз (${fmtDate(last.date)}): ${last.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(', ')}${
+          last.note ? `<br>Заметка: ${esc(last.note)}` : ''}</div>`
       : '';
     const sets = ex.sets.map((s, j) => `
       <div class="set">
@@ -125,9 +132,22 @@ function renderDraft() {
         </div>
         ${hint}
         ${sets}
-        <button class="btn small" data-add-set="${i}">+ подход</button>
+        ${ex.note !== undefined
+          ? `<textarea class="ex-note" rows="1" data-note="${i}" placeholder="Заметка к упражнению: тренажёр, техника, ощущения…">${esc(ex.note)}</textarea>`
+          : ''}
+        <div class="ex-actions">
+          <button class="btn small" data-add-set="${i}">+ подход</button>
+          ${ex.note === undefined ? `<button class="btn small" data-add-note="${i}">+ заметка</button>` : ''}
+        </div>
       </div>`;
   }).join('');
+  document.querySelectorAll('#draft-exercises .ex-note').forEach(autoGrow);
+}
+
+// Поле заметки растёт по мере ввода текста
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 2 + 'px';
 }
 
 const canonicalName = (name) =>
@@ -136,6 +156,12 @@ const canonicalName = (name) =>
 $('#draft-exercises').addEventListener('input', (e) => {
   if (e.target.dataset.name !== undefined) {
     draft.exercises[e.target.dataset.name].name = e.target.value;
+    persistDraft();
+    return;
+  }
+  if (e.target.dataset.note !== undefined) {
+    draft.exercises[e.target.dataset.note].note = e.target.value;
+    autoGrow(e.target);
     persistDraft();
     return;
   }
@@ -148,6 +174,14 @@ $('#draft-exercises').addEventListener('input', (e) => {
 // Переименование упражнения: по завершении ввода приводим к известному названию
 // и перерисовываем, чтобы обновилась подсказка «прошлый раз».
 $('#draft-exercises').addEventListener('change', (e) => {
+  // Пустую заметку убираем — снова появится кнопка «+ заметка»
+  const n = e.target.dataset.note;
+  if (n !== undefined && !e.target.value.trim()) {
+    delete draft.exercises[n].note;
+    persistDraft();
+    renderDraft();
+    return;
+  }
   const i = e.target.dataset.name;
   if (i === undefined) return;
   const ex = draft.exercises[i];
@@ -163,6 +197,13 @@ $('#draft-exercises').addEventListener('keydown', (e) => {
 $('#draft-exercises').addEventListener('click', (e) => {
   const t = e.target;
   if (t.dataset.guide) return openGuide(findExercise(t.dataset.guide), true);
+  if (t.dataset.addNote !== undefined) {
+    draft.exercises[t.dataset.addNote].note = '';
+    persistDraft();
+    renderDraft();
+    $(`[data-note="${t.dataset.addNote}"]`).focus();
+    return;
+  }
   if (t.dataset.addSet !== undefined) {
     const sets = draft.exercises[t.dataset.addSet].sets;
     const prev = sets[sets.length - 1] || { w: '', r: '' };
@@ -205,6 +246,7 @@ $('#save-workout').addEventListener('click', () => {
     .map((ex) => ({
       name: canonicalName(ex.name.trim()) || 'Без названия',
       sets: ex.sets.map((s) => ({ w: num(s.w), r: Math.round(num(s.r)) })).filter((s) => s.r > 0),
+      ...(ex.note?.trim() ? { note: ex.note.trim() } : {}),
     }))
     .filter((ex) => ex.sets.length);
   if (!exercises.length) return toast('Добавьте хотя бы один подход');
@@ -247,7 +289,8 @@ function renderHistory() {
         <div><b>${w.title ? esc(w.title) : fmtDate(w.date)}</b>${w.title ? ` <span class="muted">${fmtDate(w.date)}</span>` : ''}</div>
         <span class="muted">${Math.round(workoutVolume(w))} кг</span>
       </div>
-      <ul>${w.exercises.map((ex) => `<li>${esc(ex.name)} <em>${ex.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(' · ')}</em></li>`).join('')}</ul>
+      <ul>${w.exercises.map((ex) => `<li>${esc(ex.name)} <em>${ex.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(' · ')}</em>${
+        ex.note ? `<div class="ex-note-view">${esc(ex.note)}</div>` : ''}</li>`).join('')}</ul>
       ${w.note ? `<div class="note">${esc(w.note)}</div>` : ''}
       <div class="row" style="margin:8px 0 0">
         <button class="btn small" data-edit="${w.id}">Изменить</button>
@@ -472,7 +515,8 @@ function buildPrompt() {
   const question = preset === 'custom' ? ($('#ai-custom').value.trim() || PRESETS.analyze) : PRESETS[preset];
 
   const log = list.map((w) => {
-    const ex = w.exercises.map((e) => `  - ${e.name}: ${e.sets.map((s) => `${fmt(s.w)}кг×${s.r}`).join(', ')}`).join('\n');
+    const ex = w.exercises.map((e) => `  - ${e.name}: ${e.sets.map((s) => `${fmt(s.w)}кг×${s.r}`).join(', ')}${
+      e.note ? ` (заметка: ${e.note})` : ''}`).join('\n');
     return `${w.date}${w.title ? ` — ${w.title}` : ''}${w.note ? ` (заметка: ${w.note})` : ''}\n${ex}`;
   }).join('\n\n');
 
@@ -648,7 +692,7 @@ function buildNotesText() {
 
   const body = list.map((w) => [
     longDate(w.date) + (w.title ? ` — ${w.title}` : ''),
-    ...w.exercises.map((ex) => `• ${ex.name}: ${ex.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(', ')}`),
+    ...w.exercises.map((ex) => `• ${ex.name}: ${ex.sets.map((s) => `${fmt(s.w)}×${s.r}`).join(', ')}${ex.note ? ` — ${ex.note}` : ''}`),
     `Объём: ${Math.round(workoutVolume(w))} кг`,
     ...(w.note ? [`Заметка: ${w.note}`] : []),
   ].join('\n'));

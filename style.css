@@ -97,6 +97,10 @@ textarea { resize: vertical; margin: 12px 0; }
   border-bottom: 1px dashed var(--muted); border-radius: 0;
 }
 .ex-title:focus { background: var(--card); border-radius: 10px; border-color: var(--accent); padding: 6px 8px; }
+.ex-actions { display: flex; gap: 8px; }
+.ex-note { display: block; margin: 2px 0 8px; font-size: 15px; padding: 10px 12px; resize: none; overflow: hidden; }
+.ex-note-view { color: var(--muted); font-size: 13px; margin: 1px 0 3px 12px; }
+.ex-note-view::before { content: '↳ '; }
 .ex-hint { color: var(--muted); font-size: 13px; margin: -4px 0 8px; }
 .set {
   display: grid;
