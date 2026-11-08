@@ -45,4 +45,4 @@ python3 -m http.server 8000
 
 ## Сторонние компоненты
 
-- Схема мышц — [body-highlighter](https://github.com/lahaxearnaud/body-highlighter) 3.0.2 (MIT), файлы в `vendor/body-highlighter/` вместе с лицензией.
+- Анатомические контуры схемы мышц — из [body-highlighter](https://github.com/lahaxearnaud/body-highlighter) 3.0.2 (MIT), `vendor/body-highlighter/` вместе с лицензией. Разбивка на мышцы (средние дельты, широчайшие, ромбовидные и др.) — своя, в `exercises.js`.

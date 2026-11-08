@@ -363,40 +363,65 @@ const EX_INDEX = new Map();
 EXERCISES.forEach((ex) => [ex.name, ...ex.aliases].forEach((n) => EX_INDEX.set(normName(n), ex)));
 const findExercise = (name) => EX_INDEX.get(normName(name)) || null;
 
-// Схема мышц — библиотека body-highlighter (MIT, vendor/body-highlighter).
-// Она подключается модулем и кладёт createBodyHighlighter в window (см. index.html).
-// Наши мышцы → её группы. Средние дельты в ней входят в передние, широчайшие — в «верх спины».
-const BH_MUSCLE = {
-  chest: 'chest', front_delts: 'front-deltoids', side_delts: 'front-deltoids', rear_delts: 'back-deltoids',
-  traps: 'trapezius', biceps: 'biceps', triceps: 'triceps', forearms: 'forearm',
-  abs: 'abs', obliques: 'obliques', lats: 'upper-back', upper_back: 'upper-back', lower_back: 'lower-back',
-  glutes: 'gluteal', quads: 'quadriceps', hamstrings: 'hamstring', adductors: 'adductor', calves: 'calves',
+// Схема мышц: анатомические контуры из body-highlighter (vendor/body-highlighter/model.js),
+// разметка по мышцам — наша. В библиотеке меньше групп, поэтому часть контуров делим:
+//  • дельты: внешняя часть — средние, внутренняя — передние (спереди) или задние (сзади);
+//  • трапеция сзади: верх — трапеции, низ между лопатками — середина спины (ромбовидные);
+//  • «верх спины» библиотеки — это широчайшие;
+//  • «шея» спереди — верхние трапеции, внутренняя часть бедра — приводящие.
+// split: { axis, at, inner, outer } — разрез по x (от центра тела) или по y (top/bottom).
+const BODY_LAYOUT = {
+  anterior: {
+    chest: 'chest', obliques: 'obliques', abs: 'abs', biceps: 'biceps', triceps: 'triceps',
+    neck: 'traps', abductors: 'adductors', quadriceps: 'quads', calves: 'calves', forearm: 'forearms',
+    front_deltoids: { axis: 'x', at: 26.2, inner: 'front_delts', outer: 'side_delts' },
+  },
+  posterior: {
+    trapezius: { axis: 'y', at: 44.5, top: 'traps', bottom: 'upper_back' },
+    back_deltoids: { axis: 'x', at: 27.2, inner: 'rear_delts', outer: 'side_delts' },
+    upper_back: 'lats', triceps: 'triceps', lower_back: 'lower_back', forearm: 'forearms',
+    gluteal: 'glutes', abductor: 'adductors', hamstring: 'hamstrings', calves: 'calves',
+    left_soleus: 'calves', right_soleus: 'calves',
+  },
 };
 
-// Рисует вид спереди и сзади в container: основные мышцы ярко, вспомогательные — бледнее
-function renderBodyMap(container, primary = [], secondary = []) {
-  if (!window.createBodyHighlighter) {
-    // модуль ещё грузится — дорисуем, когда будет готов
-    window.addEventListener('bh-ready', () => renderBodyMap(container, primary, secondary), { once: true });
-    return;
-  }
-  const main = [...new Set(primary.map((m) => BH_MUSCLE[m]))];
-  const help = [...new Set(secondary.map((m) => BH_MUSCLE[m]))].filter((m) => !main.includes(m));
-  const data = [
-    { name: 'Основные', muscles: main, frequency: 2 },
-    { name: 'Помогают', muscles: help, frequency: 1 },
-  ];
-  container.innerHTML = '';
-  for (const [type, label] of [['anterior', 'спереди'], ['posterior', 'сзади']]) {
-    const fig = document.createElement('figure');
-    window.createBodyHighlighter({
-      container: fig,
-      type,
-      data,
-      bodyColor: 'var(--muscle)',
-      highlightedColors: ['var(--accent-soft)', 'var(--accent)'],
+let bodyMapSeq = 0;
+
+function bodyViewSVG(view, primary, secondary) {
+  const id = `bm${++bodyMapSeq}`;
+  const cls = (m) => (!m ? 'bm-body' : primary.includes(m) ? 'mp' : secondary.includes(m) ? 'ms' : 'mo');
+  const GAP = 0.5; // зазор между частями разрезанной мышцы, как между остальными контурами
+  let defs = '', shapes = '';
+  BH_MODEL[view].forEach(([group, polys]) => {
+    const rule = BODY_LAYOUT[view][group];
+    polys.forEach((pts, k) => {
+      if (!rule || typeof rule === 'string') {
+        shapes += `<polygon class="${cls(rule)}" points="${pts}"/>`;
+        return;
+      }
+      const xs = pts.split(' ').filter((_, j) => j % 2 === 0).map(Number);
+      const left = Math.max(...xs) < 50; // левая или правая половина тела
+      const parts = rule.axis === 'y'
+        ? [[rule.top, `0 0 100 ${rule.at - GAP}`], [rule.bottom, `0 ${rule.at + GAP} 100 200`]]
+        : (() => {
+            const cut = left ? 50 - rule.at : 50 + rule.at; // одинаковое расстояние от центра
+            const lo = [0, 0, cut - GAP, 200], hi = [cut + GAP, 0, 100 - cut - GAP, 200];
+            return left ? [[rule.outer, lo.join(' ')], [rule.inner, hi.join(' ')]]
+                        : [[rule.inner, lo.join(' ')], [rule.outer, hi.join(' ')]];
+          })();
+      parts.forEach(([muscle, box], n) => {
+        const [x, y, w, h] = box.split(' ').map(Number);
+        const cid = `${id}-${group}-${k}-${n}`;
+        defs += `<clipPath id="${cid}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath>`;
+        shapes += `<polygon class="${cls(muscle)}" points="${pts}" clip-path="url(#${cid})"/>`;
+      });
     });
-    fig.insertAdjacentHTML('beforeend', `<figcaption>${label}</figcaption>`);
-    container.appendChild(fig);
-  }
+  });
+  return `<svg viewBox="0 0 100 200" class="bm-svg"><defs>${defs}</defs>${shapes}</svg>`;
+}
+
+// Вид спереди и сзади: основные мышцы ярко, вспомогательные — бледнее
+function renderBodyMap(container, primary = [], secondary = []) {
+  container.innerHTML = [['anterior', 'спереди'], ['posterior', 'сзади']].map(([v, label]) =>
+    `<figure>${bodyViewSVG(v, primary, secondary)}<figcaption>${label}</figcaption></figure>`).join('');
 }

@@ -220,7 +220,10 @@ body[data-view="log"] #timer { display: block; }
 .bodymap { display: flex; justify-content: center; gap: 8px; margin: 4px 0 8px; }
 .bodymap figure { margin: 0; width: 46%; max-width: 170px; }
 .bodymap figcaption { text-align: center; color: var(--muted); font-size: 12px; margin-top: 4px; }
-.bodymap .rbh polygon { cursor: default !important; }
+.bm-svg { display: block; width: 100%; height: auto; }
+.bm-svg .bm-body, .bm-svg .mo { fill: var(--muscle); }
+.bm-svg .mp { fill: var(--accent); }
+.bm-svg .ms { fill: var(--accent-soft); }
 .muscle-legend .mp { background: var(--accent); }
 .muscle-legend .ms { background: var(--accent-soft); }
 .muscle-legend { font-size: 14px; }
