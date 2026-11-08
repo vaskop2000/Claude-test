@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 19; // увеличивать вместе с CACHE в sw.js
+const VERSION = 20; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -727,6 +727,58 @@ $('#import').addEventListener('change', async (e) => {
 document.body.dataset.view = 'log';
 renderTimer();
 renderDraft();
+// ---------- Установка приложения ----------
+// В браузере показываем плашку «Установите приложение». В установленном приложении
+// (режим standalone) её нет. Если браузер умеет ставить сам (Chrome на Android),
+// кнопка «Установить» открывает системное окно установки; иначе — подсказка, что нажать.
+const INSTALL_HIDE_KEY = 'wd.installHidden';
+const isInstalled = () =>
+  matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches ||
+  navigator.standalone === true;
+let installEvent = null;
+
+function installHint() {
+  const ua = navigator.userAgent;
+  if (/Telegram|WhatsApp|Instagram|FBAN|FBAV|VKClient|; wv\)/i.test(ua))
+    return 'Откройте ссылку в Chrome: ⋮ → «Открыть в браузере», и установите оттуда';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'Нажмите «Поделиться» → «На экран Домой»';
+  return 'Меню браузера ⋮ → «Установить приложение» или «Добавить на главный экран»';
+}
+
+function renderInstall() {
+  let hiddenUntil = 0;
+  try { hiddenUntil = Number(localStorage.getItem(INSTALL_HIDE_KEY)) || 0; } catch {}
+  const show = !isInstalled() && Date.now() > hiddenUntil;
+  $('#install').hidden = !show;
+  if (!show) return;
+  $('#install-btn').hidden = !installEvent;
+  $('#install-hint').textContent = installEvent ? 'Работает без интернета' : installHint();
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); // своё окно Chrome не показываем — установка по нашей кнопке
+  installEvent = e;
+  renderInstall();
+});
+window.addEventListener('appinstalled', () => {
+  installEvent = null;
+  $('#install').hidden = true;
+});
+$('#install-btn').addEventListener('click', async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  const { outcome } = await installEvent.userChoice;
+  installEvent = null;
+  if (outcome === 'accepted') $('#install').hidden = true;
+  else renderInstall();
+});
+$('#install-close').addEventListener('click', () => {
+  // Скрываем на неделю
+  try { localStorage.setItem(INSTALL_HIDE_KEY, String(Date.now() + 7 * 864e5)); } catch {}
+  $('#install').hidden = true;
+});
+renderInstall();
+
 // ---------- Обновления ----------
 // Установленное приложение Android держит в памяти, поэтому сами проверяем
 // обновления при каждом возврате в приложение и перезагружаемся, когда
