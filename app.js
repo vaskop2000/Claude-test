@@ -1,6 +1,6 @@
 'use strict';
 
-const VERSION = 13; // увеличивать вместе с CACHE в sw.js
+const VERSION = 14; // увеличивать вместе с CACHE в sw.js
 
 // ---------- Хранилище ----------
 const KEY = 'wd.workouts.v1';
@@ -424,7 +424,7 @@ function openGuide(ex, fromLog = false) {
   const names = (ms) => ms.map((m) => MUSCLES[m]).join(', ');
   d.innerHTML = `
     <button class="btn ghost back" id="guide-back">← ${fromLog ? 'К тренировке' : 'Все упражнения'}</button>
-    ${bodySVG(ex.primary, ex.secondary)}
+    <div class="bodymap" id="guide-body"></div>
     <div class="muscle-legend">
       <div><i class="mp"></i><span><b>Основные:</b> ${names(ex.primary)}</span></div>
       ${ex.secondary.length ? `<div><i class="ms"></i><span><b>Помогают:</b> ${names(ex.secondary)}</span></div>` : ''}
@@ -435,6 +435,7 @@ function openGuide(ex, fromLog = false) {
     <ul>${ex.mistakes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
     ${fromLog ? '' : `<button class="btn primary wide" id="guide-add">Добавить в тренировку</button>`}
     <p class="muted small">Общие рекомендации. При боли или травмах проконсультируйтесь с тренером или врачом.</p>`;
+  renderBodyMap($('#guide-body'), ex.primary, ex.secondary);
   window.scrollTo(0, 0);
   $('#guide-back').addEventListener('click', () => (d.dataset.back === 'log' ? show('log') : renderGuideList()));
   $('#guide-add')?.addEventListener('click', () => {

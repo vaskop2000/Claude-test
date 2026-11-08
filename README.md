@@ -42,3 +42,7 @@ python3 -m http.server 8000
 | `style.css` | Стили, светлая/тёмная тема |
 | `sw.js` | Офлайн-кэш |
 | `manifest.json`, `icons/` | Установка как приложение |
+
+## Сторонние компоненты
+
+- Схема мышц — [body-highlighter](https://github.com/lahaxearnaud/body-highlighter) 3.0.2 (MIT), файлы в `vendor/body-highlighter/` вместе с лицензией.

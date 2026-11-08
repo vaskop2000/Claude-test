@@ -363,73 +363,40 @@ const EX_INDEX = new Map();
 EXERCISES.forEach((ex) => [ex.name, ...ex.aliases].forEach((n) => EX_INDEX.set(normName(n), ex)));
 const findExercise = (name) => EX_INDEX.get(normName(name)) || null;
 
-// Упрощённая схема тела: вид спереди и сзади. Левые мышцы зеркалятся на правую сторону.
-const BODY = {
-  front: {
-    base: [
-      '<circle cx="50" cy="13" r="8.5"/>',
-      '<rect x="46" y="20" width="8" height="8"/>',
-      '<path d="M34 30 Q50 25 66 30 L64 84 Q50 90 36 84 Z"/>',
-      '<path d="M36 80 L64 80 L66 98 L34 98 Z"/>',
-      ['<ellipse cx="21" cy="88" rx="3.5" ry="5"/>', '<ellipse cx="42" cy="185" rx="5" ry="3"/>'],
-    ],
-    muscles: {
-      traps: ['<path d="M45 26 L37 31 L45 30 Z"/>'],
-      front_delts: ['<ellipse cx="33" cy="36" rx="4.5" ry="6.5"/>'],
-      side_delts: ['<ellipse cx="28.5" cy="37" rx="3" ry="6.5"/>'],
-      chest: ['<path d="M36.5 33 Q43 31 49.3 33 L49.3 48 Q42 51 37 46 Z"/>'],
-      biceps: ['<ellipse cx="27" cy="53" rx="4" ry="9.5"/>'],
-      forearms: ['<path d="M24 64 L30 64 L24.5 83 L19.5 83 Z"/>'],
-      abs: ['<rect x="44" y="51" width="12" height="29" rx="3"/>', true],
-      obliques: ['<path d="M37.5 51 L43 52 L43 78 L38 74 Z"/>'],
-      quads: ['<path d="M36 98 L49 100 L47 130 L39 130 Q34 115 36 98 Z"/>'],
-      adductors: ['<path d="M47 98 L49.5 99 L49.5 118 L46 116 Z"/>'],
-      calves: ['<path d="M38.5 140 L46.5 140 L45 170 L40 170 Q37 155 38.5 140 Z"/>'],
-    },
-    joints: ['<ellipse cx="43" cy="135" rx="4.5" ry="5"/>'],
-  },
-  back: {
-    base: [
-      '<circle cx="50" cy="13" r="8.5"/>',
-      '<rect x="46" y="20" width="8" height="8"/>',
-      '<path d="M34 30 Q50 25 66 30 L64 84 Q50 90 36 84 Z"/>',
-      '<path d="M36 80 L64 80 L66 98 L34 98 Z"/>',
-      ['<ellipse cx="21" cy="88" rx="3.5" ry="5"/>', '<ellipse cx="42" cy="185" rx="5" ry="3"/>'],
-    ],
-    muscles: {
-      traps: ['<path d="M50 23 L37 31 L45 34 L50 50 L55 34 L63 31 Z"/>', true],
-      rear_delts: ['<ellipse cx="31" cy="36" rx="5.5" ry="6.5"/>'],
-      upper_back: ['<path d="M45.5 35 L49.3 49 L41 47 L39 38 Z"/>'],
-      lats: ['<path d="M38 41 L41 49 L49.3 52 L48 72 L40 66 Q36 55 38 41 Z"/>'],
-      triceps: ['<ellipse cx="27" cy="53" rx="4" ry="9.5"/>'],
-      forearms: ['<path d="M24 64 L30 64 L24.5 83 L19.5 83 Z"/>'],
-      lower_back: ['<rect x="45" y="68" width="4.3" height="16" rx="2"/>'],
-      glutes: ['<path d="M36 84 Q43 81 49.3 86 L49.3 100 Q41 104 35.5 97 Z"/>'],
-      hamstrings: ['<path d="M36 102 L49 104 L47 130 L39 130 Q34 115 36 102 Z"/>'],
-      calves: ['<path d="M38 140 L47 140 Q48 155 45 168 L40 168 Q36 155 38 140 Z"/>'],
-    },
-    joints: ['<ellipse cx="43" cy="135" rx="4.5" ry="5"/>'],
-  },
+// Схема мышц — библиотека body-highlighter (MIT, vendor/body-highlighter).
+// Она подключается модулем и кладёт createBodyHighlighter в window (см. index.html).
+// Наши мышцы → её группы. Средние дельты в ней входят в передние, широчайшие — в «верх спины».
+const BH_MUSCLE = {
+  chest: 'chest', front_delts: 'front-deltoids', side_delts: 'front-deltoids', rear_delts: 'back-deltoids',
+  traps: 'trapezius', biceps: 'biceps', triceps: 'triceps', forearms: 'forearm',
+  abs: 'abs', obliques: 'obliques', lats: 'upper-back', upper_back: 'upper-back', lower_back: 'lower-back',
+  glutes: 'gluteal', quads: 'quadriceps', hamstrings: 'hamstring', adductors: 'adductor', calves: 'calves',
 };
 
-// Конечности (руки, ноги) — силуэт под мышцами
-const LIMBS = [
-  '<path d="M28 30 L36 31 L33 62 L31 64 L23 64 L22 44 Z"/>',
-  '<path d="M23 63 L31 63 L25 84 L19 84 Z"/>',
-  '<path d="M35 96 L49.5 98 L49 132 L38 132 Z"/>',
-  '<path d="M38 132 L48 132 L46 182 L39 182 Q36 156 38 132 Z"/>',
-];
-
-function bodySVG(primary = [], secondary = []) {
-  const mirror = (s) => `${s}<g transform="translate(100 0) scale(-1 1)">${s}</g>`;
-  const fillFor = (m) => (primary.includes(m) ? 'mp' : secondary.includes(m) ? 'ms' : 'mo');
-  const view = (v, dx, label) => {
-    const base = v.base.map((b) => (Array.isArray(b) ? mirror(b.join('')) : b)).join('') + mirror(LIMBS.join('') + v.joints.join(''));
-    const muscles = Object.entries(v.muscles).map(([m, [shape, central]]) =>
-      `<g class="${fillFor(m)}">${central ? shape : mirror(shape)}</g>`).join('');
-    return `<g transform="translate(${dx} 0)"><g class="body">${base}</g>${muscles}
-      <text class="body-lbl" x="50" y="198">${label}</text></g>`;
-  };
-  return `<svg class="bodymap" viewBox="0 0 210 202" role="img" aria-label="Работающие мышцы">
-    ${view(BODY.front, 0, 'спереди')}${view(BODY.back, 110, 'сзади')}</svg>`;
+// Рисует вид спереди и сзади в container: основные мышцы ярко, вспомогательные — бледнее
+function renderBodyMap(container, primary = [], secondary = []) {
+  if (!window.createBodyHighlighter) {
+    // модуль ещё грузится — дорисуем, когда будет готов
+    window.addEventListener('bh-ready', () => renderBodyMap(container, primary, secondary), { once: true });
+    return;
+  }
+  const main = [...new Set(primary.map((m) => BH_MUSCLE[m]))];
+  const help = [...new Set(secondary.map((m) => BH_MUSCLE[m]))].filter((m) => !main.includes(m));
+  const data = [
+    { name: 'Основные', muscles: main, frequency: 2 },
+    { name: 'Помогают', muscles: help, frequency: 1 },
+  ];
+  container.innerHTML = '';
+  for (const [type, label] of [['anterior', 'спереди'], ['posterior', 'сзади']]) {
+    const fig = document.createElement('figure');
+    window.createBodyHighlighter({
+      container: fig,
+      type,
+      data,
+      bodyColor: 'var(--muscle)',
+      highlightedColors: ['var(--accent-soft)', 'var(--accent)'],
+    });
+    fig.insertAdjacentHTML('beforeend', `<figcaption>${label}</figcaption>`);
+    container.appendChild(fig);
+  }
 }

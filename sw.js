@@ -1,6 +1,6 @@
 // Офлайн-кэш: приложение работает без интернета (кроме отправки в Claude).
-const CACHE = 'wd-v13';
-const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'exercises.js', 'manifest.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHE = 'wd-v14';
+const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'exercises.js', 'vendor/body-highlighter/body-highlighter.esm.js', 'manifest.json', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   // cache: 'reload' — при установке берём свежие файлы с сервера, а не из HTTP-кэша

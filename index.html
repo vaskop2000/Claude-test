@@ -122,6 +122,11 @@
   </nav>
 
   <div id="toast"></div>
+  <script type="module">
+    import createBodyHighlighter from './vendor/body-highlighter/body-highlighter.esm.js';
+    window.createBodyHighlighter = createBodyHighlighter;
+    window.dispatchEvent(new Event('bh-ready'));
+  </script>
   <script src="exercises.js"></script>
   <script src="app.js"></script>
 </body>
